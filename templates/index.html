@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>sharexd - index</title>
+		<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+	</head>
+	<body>
+		<pre>
+		{% include '_logo_small.html' %}
+================================================== 
+:: SERVER STATUS ::
+==================================================
+Status       : [ OK ] ONLINE
+Version      : sharexd {{ version }}
+Total Files  : {{ total_files }}
+Storage Used : {{ storage_used }}
+
+==================================================
+:: SHAREX CONFIGURATION ::
+==================================================
+<span class="section-title">Save this as sharexd.sxcu and import to ShareX:</span>
+{% set base_url = request.host_url.rstrip('/') %}
+<span class="config-block">{
+  "Version": "17.0.0",
+  "Name": "sharexd",
+  "DestinationType": "ImageUploader, TextUploader, FileUploader",
+  "RequestMethod": "POST",
+  "RequestURL": "{{ base_url }}/upload",
+  "Headers": {
+    "Authorization": "YOUR_SECRET_TOKEN_HERE"
+  },
+  "Body": "MultipartFormData",
+  "FileFormName": "file",
+	"URL": "{{ base_url }}{json:url}",
+	"ErrorMessage": "{json:error}"
+}</span>
+
+==================================================
+:: CONTACT / ADMIN ::
+==================================================
+Admin        : {{ admin_handle }}
+Abuse/Takedown: {{ abuse_email }}
+Source       : <a href="{{ github_url }}" target="_blank">github repository</a>
+</pre>
+	</body>
+</html>

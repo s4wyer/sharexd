@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>sharexd - {{ filename }}</title>
+		<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+	</head>
+	<body>
+		<div class="image-viewer">
+			<pre>
+<a href="../" class="logo-link">{% include '_logo_small.html' %}</a>
+==================================================
+:: IMAGE VIEWER ::
+==================================================
+File         : {{ filename }}
+Uploaded     : {{ uploaded_at }}
+Size         : {{ file_size }}
+Type         : {{ mime_type }}
+</pre>
+
+			<div class="image-frame">
+				<img src="{{ url_for('deliver_file', path=filename) }}" alt="{{ filename }}">
+			</div>
+
+			<pre class="image-meta">
+==================================================
+:: ACTIONS ::
+==================================================</pre>
+			<div class="image-actions">
+				<a href="{{ url_for('deliver_file', path=filename) }}?download" download="{{ filename }}">[download]</a>
+				<a href="{{ url_for('deliver_file', path=filename) }}" target="_blank">[open raw]</a>
+				<a href="{{ url_for('index') }}">[back to index]</a>
+			</div>
+		</div>
+	</body>
+</html>

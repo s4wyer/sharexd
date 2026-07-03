@@ -1,0 +1,4 @@
+[tasks.dev]
+run = "flask --app main run" 
+sources = ["**/*.py", "**/*.html"]
+
