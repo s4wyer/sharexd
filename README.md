@@ -2,8 +2,9 @@
 
 A minimalist, secure, self-hosted file sharing server built with Python and Flask.
 
-![Main Page](assets/mainpage.png)
-![View Page](assets/viewpage.png)
+Main Page                          | Image Viewer
+:---------------------------------:|:----------------------------------:
+![Main Page](assets/mainpage.png)  | ![View Page](assets/viewpage.png)
 
 ## Features
 
