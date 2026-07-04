@@ -4,6 +4,11 @@
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<title>sharexd - {{ filename }}</title>
+		<meta property="og:title" content="sharexd - {{ filename }}">
+		<meta property="og:url" content="{{ request.url }}">
+		<meta property="og:image" content="{{ url_for('deliver_file', path=filename, _external=True, _scheme='https')  }}">
+		<meta name="twitter:card" content="summary_large_image">
+		<meta property="og:type" content="website">
 		<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 	</head>
 	<body>

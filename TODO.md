@@ -1,4 +1,5 @@
 [ ] Strip metadata
+[ ] Image info (width, height)
 
 [ ] Viewers
   - [ ] Markdown (no html)
