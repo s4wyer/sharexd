@@ -45,7 +45,7 @@ Main Page                            | Image Viewer
 
 Just go to wherever you have the project running to find a ShareX config.
 
-The project also includes a script called [sxd.sh](sxd.sh). Install jq, add your instance to the config at the top of the script and upload files with:
+The project also includes a script called [sxd.sh](sxd.sh). Install jq, run the script to generate a config and upload files with:
 
 ```bash
 ./sxd.sh abc123.txt def456.txt
