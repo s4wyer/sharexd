@@ -128,7 +128,7 @@ def view_file(path):
     style_url = url_for('static', filename='style.css', _external=True)
     # completely kneecap the browser
     # basically only allow image viewing, downloading, and loading a single stylesheet
-    response.headers['Content-Security-Policy'] = f"default-src 'none'; img-src *; style-src {style_url}; sandbox allow-downloads allow-popups"
+    response.headers['Content-Security-Policy'] = f"default-src 'none'; img-src self; style-src {style_url}; sandbox allow-downloads allow-popups"
 
     return response
 

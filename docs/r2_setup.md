@@ -1,6 +1,6 @@
 # Using Cloudflare R2 with sharexd
 
-1. Log in to your Cloudflare dashboard.
+1. Log in to your [Cloudflare dashboard](https://dash.cloudflare.com).
 
 2. Select "Storage & databases" > "R2 Object Storage" > "Overview" from the sidebar.
 
