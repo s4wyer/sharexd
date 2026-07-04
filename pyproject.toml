@@ -1,6 +1,6 @@
 [project]
 name = "sharexd"
-version = "1.1.0"
+version = "1.1.1"
 description = "A simple, self-hosted file sharing server."
 readme = "README.md"
 requires-python = ">=3.14"
