@@ -13,7 +13,7 @@ from werkzeug.utils import secure_filename
 
 load_dotenv()
 
-VERSION = "v1.1.0"
+VERSION = "v1.1.1"
 
 app = Flask(__name__)
 # trust reverse proxies to provide correct HTTPS scheme and host headers
