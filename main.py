@@ -1,21 +1,39 @@
 import os
-import mimetypes
-from datetime import datetime
 import re
 import hmac
 from pathlib import Path
-from utils import generate_filename, get_storage_info
-from flask import Flask, render_template, request, jsonify, send_from_directory, make_response, url_for
+from utils import generate_filename
+from utils.storage import LocalStorageProvider, S3StorageProvider
+from flask import Flask, render_template, request, jsonify, make_response, url_for
+from werkzeug.middleware.proxy_fix import ProxyFix
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 
 load_dotenv()
 
+VERSION = "v1.1.0"
+
 app = Flask(__name__)
+# trust reverse proxies to provide correct HTTPS scheme and host headers
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get("MAX_UPLOAD_MB", 100)) * 1024 * 1024
 
-Path(app.config['UPLOAD_FOLDER']).mkdir(parents=True, exist_ok=True)
+if os.environ.get("STORAGE_BACKEND") == "s3":
+    storage = S3StorageProvider(
+        bucket=os.environ.get("S3_BUCKET_NAME"),
+        endpoint=os.environ.get("S3_ENDPOINT_URL"),
+        access_key=os.environ.get("S3_ACCESS_KEY_ID"),
+        secret_key=os.environ.get("S3_SECRET_ACCESS_KEY"),
+        region=os.environ.get("S3_REGION", "us-east-1")
+    )
+else:
+    Path(app.config['UPLOAD_FOLDER']).mkdir(parents=True, exist_ok=True)
+    storage = LocalStorageProvider(folder=app.config['UPLOAD_FOLDER'])
+
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    return jsonify({"error": "File exceeds the size limit."}), 413
 
 @app.template_filter('block_shade')
 def block_shade_filter(text):
@@ -23,17 +41,16 @@ def block_shade_filter(text):
 
 @app.route('/')
 def index():
-    files_count = len(os.listdir(app.config['UPLOAD_FOLDER']))
-    storage_size = get_storage_info.pretty_dir_size(app.config['UPLOAD_FOLDER'])
+    stats = storage.get_stats()
     
     return render_template(
         'index.html',
-        version="v1.0.0",
-        total_files=files_count,
-        storage_used=storage_size,
+        version=VERSION,
+        total_files=stats['total_files'],
+        storage_used=stats['storage_used'],
         abuse_email=os.environ.get("ABUSE_EMAIL", "abuse@yourdomain.com"),
         admin_handle=os.environ.get("ADMIN_HANDLE", "your_handle"),
-        github_url=os.environ.get("GITHUB_URL", "https://github.com/yourusername/sharexd")
+        github_url=os.environ.get("GITHUB_URL", "https://github.com/s4wyer/sharexd")
     )
 
 @app.route('/upload', methods=['POST'])
@@ -65,10 +82,9 @@ def upload():
 
     # secure_filename should never ever be needed because we generate a new file name
     # but better safe than sorry
-    new_filename = secure_filename(generate_filename.generate_filename(file_header))
-    safe_path = os.path.join(app.config["UPLOAD_FOLDER"], new_filename)
+    new_filename = secure_filename(generate_filename.generate_filename(file_header, storage.exists))
 
-    uploaded_file.save(safe_path)
+    storage.save(uploaded_file, new_filename)
 
     filename = new_filename
 
@@ -82,22 +98,17 @@ def upload():
 @app.route('/view/<path:path>')
 def view_file(path):
     safe_path = secure_filename(path)
-    full_path = os.path.join(app.config['UPLOAD_FOLDER'], safe_path)
 
-    if not os.path.isfile(full_path):
+    metadata = storage.get_metadata(safe_path)
+    if not metadata:
         return jsonify({"error": "File not found."}), 404
-
-    stat = os.stat(full_path)
-    file_size = get_storage_info.get_pretty_bytes(stat.st_size)
-    mime_type, _ = mimetypes.guess_type(safe_path)
-    uploaded_at = datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
 
     response = make_response(render_template(
         'image.html',
         filename=safe_path,
-        uploaded_at=uploaded_at,
-        file_size=file_size,
-        mime_type=mime_type or 'application/octet-stream'
+        uploaded_at=metadata['uploaded_at'],
+        file_size=metadata['file_size'],
+        mime_type=metadata['mime_type']
     ))
 
     # get the stylesheet url so we can whitelist it
@@ -115,11 +126,7 @@ def deliver_file(path):
     # instead of viewed
     force_download = 'download' in request.args
 
-    response = make_response(send_from_directory(
-        app.config["UPLOAD_FOLDER"],
-        safe_path,
-        as_attachment=force_download
-    ))
+    response = make_response(storage.stream(safe_path, force_download=force_download))
 
     response.headers['Content-Security-Policy'] = "default-src 'none'; img-src *; sandbox allow-downloads"
 

@@ -5,25 +5,24 @@ import glob
 import magic
 import mimetypes
 
-def generate_filename(buffer):
-    file_id = generate_file_id()
+def generate_filename(buffer, check_exists_func=None):
     file_extension = get_extension(buffer)
-    return f"{file_id}{file_extension}"
-
-def generate_file_id(directory="uploads", length=5):
-    os.makedirs(directory, exist_ok=True)
     
     chars = string.ascii_lowercase + string.digits
+    length = 5
     
     while True:
-        random_string = ''.join(random.choices(chars, k=length))
+        file_id = ''.join(random.choices(chars, k=length))
+        filename = f"{file_id}{file_extension}"
         
-        search_pattern = os.path.join(directory, f"{random_string}.*")
-        
-        existing_files = glob.glob(search_pattern)
-        
-        if not existing_files:
-            return random_string
+        if check_exists_func:
+            if not check_exists_func(filename):
+                return filename
+        else:
+            # Fallback to local check if no func provided
+            search_pattern = os.path.join("uploads", f"{file_id}.*")
+            if not glob.glob(search_pattern):
+                return filename
 
 def get_extension(buffer):
     mime_type = magic.from_buffer(buffer, mime=True)

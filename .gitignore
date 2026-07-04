@@ -14,5 +14,6 @@ wheels/
 .env.*
 !.env.example
 
-# Uploads
+# Application files
 uploads
+s3_stats.json

@@ -9,8 +9,9 @@ Main Page                          | Image Viewer
 ## Features
 
 - Simple interface, only a little bloat.
-- Semi-automatic .sxcu generation (just fill in your access token)
-- Token-based authentication. 
+- S3 or local storage support.
+- Semi-automatic .sxcu generation (just fill in your access token).
+- Token-based authentication.
 - Heavily restricted CSP headers for viewing files, and attempts to serve potentially dangerous files as plain text to avoid any potential XSS attacks.
 
 ## Setup
@@ -37,6 +38,7 @@ Main Page                          | Image Viewer
    ```bash
    flask --app main run --host=0.0.0.0 --port=5000
    ```
+5. (Optional) Set up S3 support in .env (example configuration for R2 [here](docs/r2_setup.md))
 
 ## Uploading Files
 
