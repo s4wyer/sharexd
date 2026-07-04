@@ -90,3 +90,39 @@ a:hover {
 .image-actions a:hover {
   text-decoration: underline dashed;
 }
+
+/* sxcu download controls */
+
+.token-input {
+  background: transparent;
+  border-bottom: 1px solid rgb(60, 60, 60);
+  outline: none;
+  color: rgb(166, 226, 46);
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  white-space: normal;
+  word-break: break-all;
+  caret-color: rgb(166, 226, 46);
+}
+
+.token-input:empty::before {
+  content: 'YOUR_SECRET_TOKEN_HERE';
+  color: rgb(75, 75, 75);
+}
+
+.token-input:focus {
+  border-bottom-color: rgb(166, 226, 46);
+}
+
+.sxcu-btn {
+  display: inline-block;
+  margin-top: 0.55rem;
+  color: rgb(86, 156, 214);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.sxcu-btn:hover {
+  text-decoration: underline dashed;
+}

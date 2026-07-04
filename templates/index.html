@@ -20,7 +20,7 @@ Storage Used : {{ storage_used }}
 ==================================================
 :: SHAREX CONFIGURATION ::
 ==================================================
-<span class="section-title">Save this as sharexd.sxcu and import to ShareX:</span>
+<span class="section-title">Fill in your token and download the config:</span>
 {% set base_url = request.host_url.rstrip('/') %}
 <span class="config-block">{
   "Version": "17.0.0",
@@ -29,14 +29,64 @@ Storage Used : {{ storage_used }}
   "RequestMethod": "POST",
   "RequestURL": "{{ base_url }}/upload",
   "Headers": {
-    "Authorization": "YOUR_SECRET_TOKEN_HERE"
+    "Authorization": "<span id="token-input" class="token-input" contenteditable="true" spellcheck="false"></span>"
   },
   "Body": "MultipartFormData",
   "FileFormName": "file",
 	"URL": "{{ base_url }}{json:url}",
 	"ErrorMessage": "{json:error}"
 }</span>
-
+<a id="sxcu-download" href="#" class="sxcu-btn" title="Download sharexd.sxcu">[ download sharexd.sxcu ]</a>
+<script>
+  (function () {
+					var baseUrl = {{ base_url | tojson }};
+					var input   = document.getElementById('token-input');
+					var link    = document.getElementById('sxcu-download');
+					
+					// strip newlines on paste so the token stays on one logical line
+					input.addEventListener('paste', function (e) {
+						e.preventDefault();
+						var text = (e.clipboardData || window.clipboardData)
+						.getData('text/plain')
+						.replace(/[\r\n]+/g, '');
+						document.execCommand('insertText', false, text);
+						});
+						
+						// also prevent enter from inserting a newline
+						input.addEventListener('keydown', function (e) {
+							if (e.key === 'Enter') e.preventDefault();
+							});
+							
+							function buildSxcu(token) {
+								return JSON.stringify({
+									"Version": "17.0.0",
+									"Name": "sharexd",
+									"DestinationType": "ImageUploader, TextUploader, FileUploader",
+									"RequestMethod": "POST",
+									"RequestURL": baseUrl + "/upload",
+									"Headers": { "Authorization": token },
+									"Body": "MultipartFormData",
+									"FileFormName": "file",
+									"URL": baseUrl + "{json:url}",
+									"ErrorMessage": "{json:error}"
+									}, null, 2);
+								}
+								
+								link.addEventListener('click', function (e) {
+									e.preventDefault();
+									var tok = input.textContent.replace(/[\r\n]+/g, '').trim() || 'YOUR_SECRET_TOKEN_HERE';
+									var blob = new Blob([buildSxcu(tok)], { type: 'application/json' });
+									var url  = URL.createObjectURL(blob);
+									var a    = document.createElement('a');
+									a.href     = url;
+									a.download = 'sharexd.sxcu';
+									document.body.appendChild(a);
+									a.click();
+									document.body.removeChild(a);
+									URL.revokeObjectURL(url);
+									});
+									})();
+</script>
 ==================================================
 :: CONTACT / ADMIN ::
 ==================================================
