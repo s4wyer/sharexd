@@ -8,8 +8,8 @@
   - [-] Implement upload tokens
     - [ ] Multiple tokens for different users
     - [x] Single token
-  - [ ] Rate-limiting with flask-limiter
   - [ ] Option to disallow executables
+  - [x] Rate-limiting with flask-limiter
   - [x] Deliver HTML as text/plain
 
 [ ] Config

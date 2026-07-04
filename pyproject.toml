@@ -11,6 +11,7 @@ maintainers = [
 dependencies = [
     "boto3>=1.43.40",
     "flask>=3.1.3",
+    "flask-limiter>=4.1.1",
     "python-dotenv>=1.2.2",
     "python-magic>=0.4.27",
     "werkzeug>=3.1.8",

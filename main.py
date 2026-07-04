@@ -5,6 +5,8 @@ from pathlib import Path
 from utils import generate_filename
 from utils.storage import LocalStorageProvider, S3StorageProvider
 from flask import Flask, render_template, request, jsonify, make_response, url_for
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
@@ -16,6 +18,14 @@ VERSION = "v1.1.0"
 app = Flask(__name__)
 # trust reverse proxies to provide correct HTTPS scheme and host headers
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["2000 per minute"],
+    storage_uri="memory://"
+)
+
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = int(os.environ.get("MAX_UPLOAD_MB", 100)) * 1024 * 1024
 
@@ -40,6 +50,7 @@ def block_shade_filter(text):
     return re.sub(r'([█▓▒░▄▀▌▐])', r'<span class="block">\1</span>', text)
 
 @app.route('/')
+@limiter.limit("100 per minute")
 def index():
     stats = storage.get_stats()
     
@@ -54,6 +65,7 @@ def index():
     )
 
 @app.route('/upload', methods=['POST'])
+@limiter.limit("300 per minute")
 def upload():
     auth_header = request.headers.get('Authorization')
 
@@ -96,6 +108,7 @@ def upload():
     return jsonify({"url": url })
 
 @app.route('/view/<path:path>')
+@limiter.limit("3000 per minute")
 def view_file(path):
     safe_path = secure_filename(path)
 
@@ -120,6 +133,7 @@ def view_file(path):
     return response
 
 @app.route('/<path:path>')
+@limiter.limit("3000 per minute")
 def deliver_file(path):
     safe_path = secure_filename(path)
     # if the user appends ?download, it will be sent as an attachment that will be downloaded
