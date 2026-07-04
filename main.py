@@ -130,7 +130,7 @@ def deliver_file(path):
 
     response.headers['Content-Security-Policy'] = "default-src 'none'; img-src *; sandbox allow-downloads"
 
-    if safe_path.endswith(('.html', '.htm', '.xml')):
+    if safe_path.endswith(('.html', '.htm', '.xml', '.xhtml', '.mht', '.mhtml')):
         response.headers['Content-Type'] = 'text/plain'
 
     if safe_path.endswith(('.py', '.js')):

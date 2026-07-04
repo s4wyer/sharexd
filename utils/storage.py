@@ -31,6 +31,8 @@ class LocalStorageProvider(StorageProvider):
     def __init__(self, folder):
         self.upload_folder = folder
         os.makedirs(self.upload_folder, exist_ok=True)
+        self._cached_stats = None
+        self._last_stats_update = 0
 
     def save(self, file_object, filename):
         safe_path = os.path.join(self.upload_folder, filename)
@@ -70,12 +72,19 @@ class LocalStorageProvider(StorageProvider):
     def get_stats(self) -> dict:
         if not os.path.exists(self.upload_folder):
             return {'total_files': 0, 'storage_used': '0 B'}
-        files_count = len(os.listdir(self.upload_folder))
-        storage_size = get_storage_info.pretty_dir_size(self.upload_folder)
-        return {
-            'total_files': files_count,
-            'storage_used': storage_size
-        }
+            
+        current_time = time.time()
+        # cache for 5 minutes to prevent an I/O DOS attack
+        if self._cached_stats is None or current_time - self._last_stats_update > 300:
+            files_count = len(os.listdir(self.upload_folder))
+            storage_size = get_storage_info.pretty_dir_size(self.upload_folder)
+            self._cached_stats = {
+                'total_files': files_count,
+                'storage_used': storage_size
+            }
+            self._last_stats_update = current_time
+            
+        return self._cached_stats
 
 class S3StorageProvider(StorageProvider):
     def __init__(self, bucket, endpoint, access_key, secret_key, region):

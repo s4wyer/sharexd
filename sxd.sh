@@ -17,7 +17,7 @@ for file in "$@"; do
     response=$(curl -s -X POST -H "Authorization: $UPLOAD_TOKEN" -F "file=@$file" "$INSTANCE_URL/upload")
     
     if command -v jq >/dev/null 2>&1; then
-        url=$(echo "$response" | jq -r '.url')
+        url=$(echo "$response" | jq -r '.url' 2>/dev/null)
         if [ "$url" != "null" ] && [ -n "$url" ]; then
             echo "$INSTANCE_URL$url"
         else
