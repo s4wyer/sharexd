@@ -31,7 +31,7 @@ Main Page                          | Image Viewer
    ```bash
    uv sync
    # or using pip:
-   # pip install flask python-dotenv python-magic werkzeug
+   # pip install .
    ```
 
 4. Run the server
