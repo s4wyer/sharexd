@@ -1,12 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>sharexd - index</title>
-		<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-	</head>
-	<body>
+{% extends 'base.html' %}
+
+{% block title %} - index{% endblock %}
+
+{% block content %}
 		<pre>
 		{% include '_logo_small.html' %}
 ================================================== 
@@ -96,5 +92,4 @@ Admin          : {{ admin_handle }}
 Abuse/Takedown : {{ abuse_email }}
 Source         : <a href="{{ github_url }}" target="_blank">github repository</a>
 </pre>
-	</body>
-</html>
+{% endblock %}

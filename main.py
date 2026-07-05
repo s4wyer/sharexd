@@ -107,10 +107,7 @@ def upload():
 
     filename = new_filename
 
-    if filename.endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.avif', '.tiff', '.tif')):
-        url = url_for('view_file', path=filename)
-    else:
-        url = url_for('deliver_file', path=filename)
+    url = url_for('view_file', path=filename)
 
     timestamp = int(time.time())
     delete_token = generate_delete_token(filename, timestamp)
@@ -151,19 +148,26 @@ def view_file(path):
     if not metadata:
         return jsonify({"error": "File not found."}), 404
 
+    mime_type = metadata['mime_type']
+    
+    if mime_type.startswith('image/'):
+        template_name = 'image.html'
+    else:
+        template_name = 'viewer.html'
+
     response = make_response(render_template(
-        'image.html',
+        template_name,
         filename=safe_path,
         uploaded_at=metadata['uploaded_at'],
         file_size=metadata['file_size'],
-        mime_type=metadata['mime_type']
+        mime_type=mime_type
     ))
 
     # get the stylesheet url so we can whitelist it
     style_url = url_for('static', filename='style.css', _external=True)
     # completely kneecap the browser
-    # basically only allow image viewing, downloading, and loading a single stylesheet
-    response.headers['Content-Security-Policy'] = f"default-src 'none'; img-src 'self'; style-src {style_url}; sandbox allow-downloads allow-popups"
+    # basically only allow file viewing, downloading, and loading a single stylesheet
+    response.headers['Content-Security-Policy'] = f"default-src 'none'; img-src 'self'; media-src 'self'; style-src {style_url}; sandbox allow-downloads allow-popups"
 
     return response
 
