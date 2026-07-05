@@ -18,5 +18,6 @@
   - [ ] Gfycat style filenames
   - [x] File size limit
 
+[x] Deletion URLs
 [x] Write a shell script to upload to sharexd
 [x] S3 integration

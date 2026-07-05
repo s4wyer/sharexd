@@ -11,7 +11,7 @@ Main Page                            | Image Viewer
 
 - Simple interface, only a little bloat.
 - S3 or local storage support.
-- Semi-automatic .sxcu generation (just fill in your access token).
+- Automatic .sxcu generation (just fill in your access token).
 - Token-based authentication.
 - Heavily restricted CSP headers for viewing files, and attempts to serve potentially dangerous files as plain text to avoid any potential XSS attacks.
 

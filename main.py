@@ -1,6 +1,8 @@
 import os
 import re
 import hmac
+import hashlib
+import time
 from pathlib import Path
 from utils import generate_filename
 from utils.storage import LocalStorageProvider, S3StorageProvider
@@ -14,6 +16,11 @@ from werkzeug.utils import secure_filename
 load_dotenv()
 
 VERSION = "v1.1.1"
+
+def generate_delete_token(filename: str, timestamp: int) -> str:
+    secret = os.environ.get("UPLOAD_TOKEN", "").encode()
+    msg = f"{filename}:{timestamp}".encode()
+    return hmac.new(secret, msg, hashlib.sha256).hexdigest()
 
 app = Flask(__name__)
 # trust reverse proxies to provide correct HTTPS scheme and host headers
@@ -101,11 +108,39 @@ def upload():
     filename = new_filename
 
     if filename.endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.avif', '.tiff', '.tif')):
-        url = f'/view/{filename}'
+        url = url_for('view_file', path=filename)
     else:
-        url = f'/{filename}'    
+        url = url_for('deliver_file', path=filename)
 
-    return jsonify({"url": url })
+    timestamp = int(time.time())
+    delete_token = generate_delete_token(filename, timestamp)
+    delete_url = url_for('delete_file', filename=filename, timestamp=timestamp, token=delete_token)
+
+    return jsonify({"url": url, "delete_url": delete_url})
+
+@app.route('/delete/<path:filename>/<int:timestamp>/<token>', methods=['DELETE', 'GET', 'POST'])
+@limiter.limit("60 per minute")
+def delete_file(filename, timestamp, token):
+    safe_path = secure_filename(filename)
+    expected = generate_delete_token(safe_path, timestamp)
+
+    if not hmac.compare_digest(expected, token):
+        return jsonify({"error": "Invalid delete token."}), 403
+
+    if request.method == 'GET':
+        return render_template('delete.html', filename=safe_path, deleted=False)
+
+    if not storage.exists(safe_path):
+        if request.method == 'POST':
+            return render_template('delete.html', filename=safe_path, deleted=False, error="File not found."), 404
+        return jsonify({"error": "File not found."}), 404
+
+    storage.delete(safe_path)
+    
+    if request.method == 'POST':
+        return render_template('delete.html', filename=safe_path, deleted=True)
+        
+    return jsonify({"message": "File deleted."}), 200
 
 @app.route('/view/<path:path>')
 @limiter.limit("3000 per minute")

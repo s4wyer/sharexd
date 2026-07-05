@@ -24,12 +24,16 @@ for file in "$@"; do
         continue
     fi
 
-    response=$(curl -s -X POST -H "Authorization: $SXD_UPLOAD_TOKEN" -F "file=@$file" "$SXD_INSTANCE_URL/upload")
+    response=$(curl --user-agent "sxd.sh/1.0" -s -X POST -H "Authorization: $SXD_UPLOAD_TOKEN" -F "file=@$file" "$SXD_INSTANCE_URL/upload")
     
     if command -v jq >/dev/null 2>&1; then
         url=$(echo "$response" | jq -r '.url' 2>/dev/null)
+        delete_url=$(echo "$response" | jq -r '.delete_url' 2>/dev/null)
         if [ "$url" != "null" ] && [ -n "$url" ]; then
             echo "$SXD_INSTANCE_URL$url"
+            if [ "$delete_url" != "null" ] && [ -n "$delete_url" ]; then
+                echo "Delete URL: $SXD_INSTANCE_URL$delete_url"
+            fi
         else
             echo "Response: $response"
         fi

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>sharexd - delete {{ filename }}</title>
+		<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+	</head>
+	<body>
+		<div class="image-viewer">
+			<pre>
+<a href="{{ url_for('index') }}" class="logo-link">{% include '_logo_small.html' %}</a>
+==================================================
+:: DELETE FILE ::
+==================================================
+
+File   : {{ filename }}
+{% if error %}
+Status : [ ERROR ] {{ error }}
+{% elif deleted %}
+Status : [ OK ] File deleted successfully.
+{% else %}
+Status : [ WARN ] Are you sure you want to delete this file?
+<form id="delete-form" method="POST" style="display: none;"></form>
+<a href="#" onclick="document.getElementById('delete-form').submit(); return false;">[ confirm deletion ]</a>
+{% endif %}
+		</div>
+	</body>
+</html>

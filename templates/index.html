@@ -34,6 +34,7 @@ Storage Used : {{ storage_used }}
   "Body": "MultipartFormData",
   "FileFormName": "file",
 	"URL": "{{ base_url }}{json:url}",
+	"DeletionURL": "{{ base_url }}{json:delete_url}",
 	"ErrorMessage": "{json:error}"
 }</span>
 <a id="sxcu-download" href="#" class="sxcu-btn" title="Download sharexd.sxcu">[ download sharexd.sxcu ]</a>
@@ -68,6 +69,7 @@ Storage Used : {{ storage_used }}
 									"Body": "MultipartFormData",
 									"FileFormName": "file",
 									"URL": baseUrl + "{json:url}",
+									"DeletionURL": baseUrl + "{json:delete_url}",
 									"ErrorMessage": "{json:error}"
 									}, null, 2);
 								}

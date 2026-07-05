@@ -27,6 +27,9 @@ class StorageProvider:
     def get_stats(self) -> dict:
         raise NotImplementedError
 
+    def delete(self, filename):
+        raise NotImplementedError
+
 class LocalStorageProvider(StorageProvider):
     def __init__(self, folder):
         self.upload_folder = folder
@@ -68,6 +71,12 @@ class LocalStorageProvider(StorageProvider):
             safe_path,
             as_attachment=force_download
         ))
+
+    def delete(self, filename):
+        safe_path = secure_filename(filename)
+        full_path = os.path.join(self.upload_folder, safe_path)
+        if os.path.isfile(full_path):
+            os.remove(full_path)
 
     def get_stats(self) -> dict:
         if not os.path.exists(self.upload_folder):
@@ -173,6 +182,12 @@ class S3StorageProvider(StorageProvider):
         flask_response.headers["Content-Length"] = str(response.get('ContentLength', 0))
             
         return flask_response
+
+    def delete(self, filename):
+        try:
+            self.s3.delete_object(Bucket=self.bucket, Key=filename)
+        except ClientError:
+            pass
 
     def get_stats(self) -> dict:
         def update_stats_task():
