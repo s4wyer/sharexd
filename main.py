@@ -15,7 +15,7 @@ from werkzeug.utils import secure_filename
 
 load_dotenv()
 
-VERSION = "v1.1.1"
+VERSION = "v1.1.2"
 
 def generate_delete_token(filename: str, timestamp: int) -> str:
     secret = os.environ.get("UPLOAD_TOKEN", "").encode()
