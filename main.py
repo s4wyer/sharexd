@@ -154,19 +154,43 @@ def view_file(path):
         template_name = 'image.html'
     elif mime_type.startswith('audio/'):
         template_name = 'audio.html'
+    elif mime_type.startswith('text/') or mime_type in ['application/json', 'application/xml', 'application/javascript', 'application/x-sh']:
+        template_name = 'text.html'
     else:
         template_name = 'viewer.html'
 
     import secrets
     script_nonce = secrets.token_urlsafe(16)
 
+    kwargs = {
+        'filename': safe_path,
+        'uploaded_at': metadata['uploaded_at'],
+        'file_size': metadata['file_size'],
+        'mime_type': mime_type,
+        'nonce': script_nonce
+    }
+
+    if template_name == 'text.html':
+        content_bytes = storage.read(safe_path)
+        if content_bytes is None:
+            return jsonify({"error": "File not found."}), 404
+            
+        if len(content_bytes) > 20 * 1024 * 1024:
+            content_bytes = content_bytes[:5 * 1024 * 1024] + b'\n... [TRUNCATED: FILE EXCEEDS 20MB LIMIT] ...'
+            
+        try:
+            kwargs['text_content'] = content_bytes.decode('utf-8')
+        except UnicodeDecodeError:
+            try:
+                kwargs['text_content'] = content_bytes.decode('latin-1')
+            except Exception:
+                kwargs['text_content'] = "Unable to decode text content."
+
+        kwargs['line_count'] = kwargs['text_content'].count('\n') + 1
+
     response = make_response(render_template(
         template_name,
-        filename=safe_path,
-        uploaded_at=metadata['uploaded_at'],
-        file_size=metadata['file_size'],
-        mime_type=mime_type,
-        nonce=script_nonce
+        **kwargs
     ))
 
     # get the stylesheet url so we can whitelist it

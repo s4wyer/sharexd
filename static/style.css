@@ -10,6 +10,28 @@ body {
   justify-content: center;
 }
 
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(15, 15, 15);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(45, 45, 45);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(86, 156, 214);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(45, 45, 45) rgb(15, 15, 15);
+}
+
 pre {
   margin: 0px;
   white-space: pre-wrap;
@@ -79,7 +101,7 @@ a:hover {
   gap: 0.75rem;
   border: 1px solid rgb(45, 45, 45);
   padding: 1rem;
-  width: 100%;
+  width: 112%;
   box-sizing: border-box;
   background-color: rgb(15, 15, 15);
 }

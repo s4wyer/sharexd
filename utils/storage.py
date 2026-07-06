@@ -24,6 +24,9 @@ class StorageProvider:
     def stream(self, filename, force_download=False):
         raise NotImplementedError
 
+    def read(self, filename) -> bytes:
+        raise NotImplementedError
+
     def get_stats(self) -> dict:
         raise NotImplementedError
 
@@ -72,6 +75,14 @@ class LocalStorageProvider(StorageProvider):
             as_attachment=force_download,
             conditional=True
         ))
+
+    def read(self, filename) -> bytes:
+        safe_path = secure_filename(filename)
+        full_path = os.path.join(self.upload_folder, safe_path)
+        if not os.path.isfile(full_path):
+            return None
+        with open(full_path, 'rb') as f:
+            return f.read()
 
     def delete(self, filename):
         safe_path = secure_filename(filename)
@@ -196,6 +207,15 @@ class S3StorageProvider(StorageProvider):
         flask_response.headers['Accept-Ranges'] = 'bytes'
             
         return flask_response
+
+    def read(self, filename) -> bytes:
+        try:
+            response = self.s3.get_object(Bucket=self.bucket, Key=filename)
+            return response['Body'].read()
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'NoSuchKey':
+                return None
+            raise
 
     def delete(self, filename):
         try:
