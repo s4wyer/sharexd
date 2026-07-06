@@ -1,11 +1,13 @@
 # Viewers
   - [ ] Unknown files
+  - [ ] Archives
   - [ ] Markdown (no html)
-  - [ ] Text, with syntax highlighting
   - [ ] PDFs (pdf.js)
   - [ ] OBJ/STL files (three.js)
   - [ ] CSV (convert to an html table)
   - [ ] Show metadata for media files
+  - [-] Text
+    - [ ] Syntax highlighting
 
 # Security
   - [-] Implement upload tokens

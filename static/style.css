@@ -1,6 +1,20 @@
+:root {
+  --bg-base: rgb(10, 10, 10);
+  --bg-surface: rgb(15, 15, 15);
+  --bg-elevated: rgb(20, 20, 20);
+  --fg-base: rgb(212, 212, 212);
+  --fg-muted: rgb(136, 136, 136);
+  --fg-placeholder: rgb(75, 75, 75);
+  --border-color: rgb(45, 45, 45);
+  --border-focus: rgb(60, 60, 60);
+  --accent-blue: rgb(86, 156, 214);
+  --accent-green: rgb(166, 226, 46);
+  --accent-orange: rgb(209, 154, 102);
+}
+
 body {
-  background-color: rgb(10, 10, 10);
-  color: rgb(212, 212, 212);
+  background-color: var(--bg-base);
+  color: var(--fg-base);
   font-family: Consolas, Menlo, Monaco, monospace;
   font-size: 14px;
   line-height: 1.2;
@@ -16,20 +30,20 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgb(15, 15, 15);
+  background: var(--bg-surface);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgb(45, 45, 45);
+  background: var(--border-color);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgb(86, 156, 214);
+  background: var(--accent-blue);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgb(45, 45, 45) rgb(15, 15, 15);
+  scrollbar-color: var(--border-color) var(--bg-surface);
 }
 
 pre {
@@ -39,13 +53,13 @@ pre {
 }
 
 .logo {
-  color: rgb(209, 154, 102);
+  color: var(--accent-orange);
   font-weight: bold;
   margin-bottom: 2rem;
 }
 
 .logo .block {
-  color: rgb(45, 45, 45);
+  color: var(--border-color);
 }
 
 a.logo-link {
@@ -54,17 +68,17 @@ a.logo-link {
 }
 
 .section-title {
-  color: rgb(136, 136, 136);
+  color: var(--fg-muted);
   margin-top: 2rem;
   margin-bottom: 0.5rem;
 }
 
 .config-block {
-  color: rgb(166, 226, 46);
+  color: var(--accent-green);
 }
 
 a {
-  color: rgb(86, 156, 214);
+  color: var(--accent-blue);
   text-decoration: none;
 }
 
@@ -90,7 +104,7 @@ a:hover {
   display: block;
   max-width: 100%;
   height: auto;
-  border: 1px solid rgb(45, 45, 45);
+  border: 1px solid var(--border-color);
   image-rendering: auto;
   color-scheme: dark;
 }
@@ -99,11 +113,11 @@ a:hover {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  border: 1px solid rgb(45, 45, 45);
+  border: 1px solid var(--border-color);
   padding: 1rem;
   width: 112%;
   box-sizing: border-box;
-  background-color: rgb(15, 15, 15);
+  background-color: var(--bg-surface);
 }
 
 .player-header {
@@ -113,7 +127,7 @@ a:hover {
 }
 
 .player-title {
-  color: rgb(86, 156, 214);
+  color: var(--accent-blue);
   font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
@@ -134,15 +148,20 @@ a:hover {
 
 .player-vol-label {
   font-size: 13px;
-  color: rgb(136, 136, 136);
+  color: var(--fg-muted);
 }
 
 .player-btn {
-  color: rgb(166, 226, 46);
+  color: var(--accent-green);
   text-decoration: none;
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
+}
+
+.player-btn:focus-visible {
+  outline: 1px dashed var(--accent-green);
+  outline-offset: 4px;
 }
 
 .player-btn:hover {
@@ -150,7 +169,7 @@ a:hover {
 }
 
 .player-time {
-  color: rgb(136, 136, 136);
+  color: var(--fg-muted);
   font-size: 13px;
   white-space: nowrap;
 }
@@ -158,8 +177,8 @@ a:hover {
 .player-progress-container {
   width: 100%;
   height: 14px;
-  background-color: rgb(20, 20, 20);
-  border: 1px solid rgb(45, 45, 45);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-color);
   cursor: pointer;
   position: relative;
 }
@@ -167,8 +186,8 @@ a:hover {
 .player-volume-container {
   width: 60px;
   height: 14px;
-  background-color: rgb(20, 20, 20);
-  border: 1px solid rgb(45, 45, 45);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-color);
   cursor: pointer;
   position: relative;
   flex-shrink: 0;
@@ -177,14 +196,14 @@ a:hover {
 .player-progress-bar {
   height: 100%;
   width: 0%;
-  background-color: rgb(86, 156, 214);
+  background-color: var(--accent-blue);
 }
 
 .file-frame audio {
   display: block;
   width: 100%;
   height: 54px;
-  border: 1px solid rgb(45, 45, 45);
+  border: 1px solid var(--border-color);
   border-radius: 0;
   color-scheme: dark;
 }
@@ -192,7 +211,7 @@ a:hover {
 .file-frame video::-webkit-media-controls-panel,
 .file-frame audio::-webkit-media-controls-panel {
   border-radius: 0;
-  background-color: rgb(20, 20, 20);
+  background-color: var(--bg-elevated);
 }
 
 .file-frame video::-webkit-media-controls-enclosure,
@@ -205,7 +224,7 @@ a:hover {
 
 
 .file-meta {
-  color: rgb(136, 136, 136);
+  color: var(--fg-muted);
   margin-top: 0.75rem;
   font-size: 13px;
 }
@@ -217,7 +236,7 @@ a:hover {
 }
 
 .file-actions a {
-  color: rgb(86, 156, 214);
+  color: var(--accent-blue);
 }
 
 .file-actions a:hover {
@@ -228,34 +247,49 @@ a:hover {
 
 .token-input {
   background: transparent;
-  border-bottom: 1px solid rgb(60, 60, 60);
+  border-bottom: 1px solid var(--border-focus);
   outline: none;
-  color: rgb(166, 226, 46);
+  color: var(--accent-green);
   font-family: inherit;
   font-size: inherit;
   line-height: inherit;
   white-space: normal;
   word-break: break-all;
-  caret-color: rgb(166, 226, 46);
+  caret-color: var(--accent-green);
 }
 
 .token-input:empty::before {
   content: 'YOUR_SECRET_TOKEN_HERE';
-  color: rgb(75, 75, 75);
+  color: var(--fg-placeholder);
+}
+
+.token-input:focus-visible {
+  outline: none;
 }
 
 .token-input:focus {
-  border-bottom-color: rgb(166, 226, 46);
+  border-bottom-color: var(--accent-green);
 }
 
 .sxcu-btn {
   display: inline-block;
   margin-top: 0.55rem;
-  color: rgb(86, 156, 214);
+  color: var(--accent-blue);
   text-decoration: none;
   cursor: pointer;
 }
 
+.sxcu-btn:focus-visible {
+  outline: 1px dashed var(--accent-blue);
+  outline-offset: 4px;
+}
+
 .sxcu-btn:hover {
   text-decoration: underline dashed;
+}
+
+/* text file viewer */
+.text-file-content {
+  overflow: auto;
+  max-height: 75vh;
 }
