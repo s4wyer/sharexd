@@ -2,10 +2,10 @@
 
 A minimalist, secure, self-hosted file sharing server built with Python and Flask.
 
-Main Page                            | Image Viewer
-:-----------------------------------:|:----------------------------------:
-![Main Page](assets/mainpage.png)    | ![View Page](assets/viewpage.png)
-[Preview](https://x.sawyer.systems)  | [Preview](https://x.sawyer.systems/view/qzl7m.png)
+Main Page                            | Image Viewer                                        |  Audio Player |
+:-----------------------------------:|:---------------------------------------------------:|:---------------:|
+![Main Page](assets/mainpage.png)    | ![Image Page](assets/imagepage.png)                 | ![Audio Player](assets/audiopage.png) |
+[Preview](https://x.sawyer.systems)  | [Preview](https://x.sawyer.systems/view/qzl7m.png)  | [Preview](https://x.sawyer.systems/view/8xvq7.m4a) |
 
 ## Features
 
