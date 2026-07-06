@@ -5,6 +5,7 @@
   - [ ] PDFs (pdf.js)
   - [ ] OBJ/STL files (three.js)
   - [ ] CSV (convert to an html table)
+  - [ ] Show metadata for media files
 
 # Security
   - [-] Implement upload tokens
