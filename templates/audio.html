@@ -1,0 +1,83 @@
+{% extends 'viewer.html' %}
+
+{% block file_display %}
+					<audio id="audio-player" src="{{ url_for('deliver_file', path=filename) }}" type="{{ mime_type }}" style="display: none !important;"></audio>
+					
+					<div id="custom-player" class="custom-player" style="display: none;">
+						<a href="#" id="play-btn" class="player-btn">[ play ]</a>
+						<span id="time-display" class="player-time">00:00 / 00:00</span>
+						<div id="progress-container" class="player-progress-container">
+							<div id="progress-bar" class="player-progress-bar"></div>
+						</div>
+					</div>
+
+					<noscript>
+						<audio controls class="native-audio">
+							<source src="{{ url_for('deliver_file', path=filename) }}" type="{{ mime_type }}">
+						</audio>
+					</noscript>
+
+					<script nonce="{{ nonce }}">
+						document.getElementById('custom-player').style.display = 'flex';
+						
+						const audio = document.getElementById('audio-player');
+						const playBtn = document.getElementById('play-btn');
+						const timeDisplay = document.getElementById('time-display');
+						const progressContainer = document.getElementById('progress-container');
+						const progressBar = document.getElementById('progress-bar');
+
+						playBtn.addEventListener('click', (e) => {
+							e.preventDefault();
+							if (audio.paused) {
+								audio.play();
+								playBtn.innerText = '[ pause ]';
+							} else {
+								audio.pause();
+								playBtn.innerText = '[ play ]';
+							}
+						});
+
+						function formatTime(seconds) {
+							if (isNaN(seconds) || !isFinite(seconds)) return "00:00";
+							const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+							const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+							return `${m}:${s}`;
+						}
+
+						audio.addEventListener('loadedmetadata', () => {
+							timeDisplay.innerText = `${formatTime(0)} / ${formatTime(audio.duration)}`;
+						});
+
+						audio.addEventListener('timeupdate', () => {
+							timeDisplay.innerText = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+							if (isFinite(audio.duration) && audio.duration > 0) {
+								const progress = (audio.currentTime / audio.duration) * 100;
+								progressBar.style.width = `${progress}%`;
+							}
+						});
+
+						progressContainer.addEventListener('click', (e) => {
+							const rect = progressContainer.getBoundingClientRect();
+							const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+							const dur = isFinite(audio.duration) ? audio.duration : (audio.seekable && audio.seekable.length ? audio.seekable.end(audio.seekable.length - 1) : 0);
+							
+							if (dur > 0) {
+								audio.currentTime = pos * dur;
+							}
+						});
+						
+						document.addEventListener('keydown', (e) => {
+							if (e.key === 'ArrowRight') {
+								const dur = isFinite(audio.duration) ? audio.duration : (audio.seekable && audio.seekable.length ? audio.seekable.end(audio.seekable.length - 1) : audio.currentTime + 1);
+								audio.currentTime = Math.min(audio.currentTime + 1, dur);
+							} else if (e.key === 'ArrowLeft') {
+								audio.currentTime = Math.max(audio.currentTime - 1, 0);
+							}
+						});
+
+						audio.addEventListener('ended', () => {
+							playBtn.innerText = '[ play ]';
+							progressBar.style.width = '0%';
+						});
+					</script>
+{% endblock %}

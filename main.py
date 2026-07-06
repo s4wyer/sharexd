@@ -15,7 +15,7 @@ from werkzeug.utils import secure_filename
 
 load_dotenv()
 
-VERSION = "v1.1.2"
+VERSION = "v1.1.3"
 
 def generate_delete_token(filename: str, timestamp: int) -> str:
     secret = os.environ.get("UPLOAD_TOKEN", "").encode()
@@ -152,22 +152,28 @@ def view_file(path):
     
     if mime_type.startswith('image/'):
         template_name = 'image.html'
+    elif mime_type.startswith('audio/'):
+        template_name = 'audio.html'
     else:
         template_name = 'viewer.html'
+
+    import secrets
+    script_nonce = secrets.token_urlsafe(16)
 
     response = make_response(render_template(
         template_name,
         filename=safe_path,
         uploaded_at=metadata['uploaded_at'],
         file_size=metadata['file_size'],
-        mime_type=mime_type
+        mime_type=mime_type,
+        nonce=script_nonce
     ))
 
     # get the stylesheet url so we can whitelist it
     style_url = url_for('static', filename='style.css', _external=True)
     # completely kneecap the browser
-    # basically only allow file viewing, downloading, and loading a single stylesheet
-    response.headers['Content-Security-Policy'] = f"default-src 'none'; img-src 'self'; media-src 'self'; style-src {style_url}; sandbox allow-downloads allow-popups"
+    # basically only allow file viewing, downloading, and loading a single stylesheet (plus a nonced inline script for custom players)
+    response.headers['Content-Security-Policy'] = f"default-src 'none'; img-src 'self'; media-src 'self'; style-src {style_url} 'unsafe-inline'; script-src 'nonce-{script_nonce}'; sandbox allow-downloads allow-popups allow-scripts allow-same-origin"
 
     return response
 
@@ -181,7 +187,8 @@ def deliver_file(path):
 
     response = make_response(storage.stream(safe_path, force_download=force_download))
 
-    response.headers['Content-Security-Policy'] = "default-src 'none'; img-src *; sandbox allow-downloads"
+    response.headers['Content-Security-Policy'] = "default-src 'none'; img-src *; media-src *; sandbox allow-downloads"
+    response.headers['Access-Control-Allow-Origin'] = '*'
 
     if safe_path.endswith(('.html', '.htm', '.xml', '.xhtml', '.mht', '.mhtml')):
         response.headers['Content-Type'] = 'text/plain'

@@ -5,6 +5,8 @@ import glob
 import magic
 import mimetypes
 
+mimetypes.add_type('audio/x-m4a', '.m4a')
+
 def generate_filename(buffer, check_exists_func=None):
     file_extension = get_extension(buffer)
     

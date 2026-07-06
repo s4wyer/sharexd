@@ -69,7 +69,8 @@ class LocalStorageProvider(StorageProvider):
         return make_response(send_from_directory(
             self.upload_folder,
             safe_path,
-            as_attachment=force_download
+            as_attachment=force_download,
+            conditional=True
         ))
 
     def delete(self, filename):
@@ -157,8 +158,15 @@ class S3StorageProvider(StorageProvider):
         }
 
     def stream(self, filename, force_download=False):
+        from flask import request
+        
+        extra_args = {}
+        range_header = request.headers.get('Range')
+        if range_header:
+            extra_args['Range'] = range_header
+
         try:
-            response = self.s3.get_object(Bucket=self.bucket, Key=filename)
+            response = self.s3.get_object(Bucket=self.bucket, Key=filename, **extra_args)
         except ClientError as e:
             if e.response['Error']['Code'] == 'NoSuchKey':
                 from werkzeug.exceptions import NotFound
@@ -172,7 +180,8 @@ class S3StorageProvider(StorageProvider):
             finally:
                 response['Body'].close()
 
-        flask_response = Response(generate(), mimetype=response.get('ContentType', 'application/octet-stream'))
+        status = 206 if 'ContentRange' in response else 200
+        flask_response = Response(generate(), status=status, mimetype=response.get('ContentType', 'application/octet-stream'))
         
         if force_download:
             flask_response.headers["Content-Disposition"] = f"attachment; filename={filename}"
@@ -180,6 +189,11 @@ class S3StorageProvider(StorageProvider):
             flask_response.headers["Content-Disposition"] = f"inline; filename={filename}"
             
         flask_response.headers["Content-Length"] = str(response.get('ContentLength', 0))
+        
+        if 'ContentRange' in response:
+            flask_response.headers['Content-Range'] = response['ContentRange']
+            
+        flask_response.headers['Accept-Ranges'] = 'bytes'
             
         return flask_response
 

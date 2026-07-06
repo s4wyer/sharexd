@@ -21,6 +21,7 @@
 
 # Maintainability
   - [ ] Split each route into different files
+  - [ ] Debug logs
 
 # Design
   - [ ] Add server uptime to the index page
