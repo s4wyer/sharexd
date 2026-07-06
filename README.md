@@ -5,7 +5,7 @@ A minimalist, secure, self-hosted file sharing server built with Python and Flas
 Main Page                            | Image Viewer                                        |  Audio Player |
 :-----------------------------------:|:---------------------------------------------------:|:---------------:|
 ![Main Page](assets/mainpage.png)    | ![Image Page](assets/imagepage.png)                 | ![Audio Player](assets/audiopage.png) |
-[Preview](https://x.sawyer.systems)  | [Preview](https://x.sawyer.systems/view/qzl7m.png)  | [Preview](https://x.sawyer.systems/view/8xvq7.m4a) |
+[Preview](https://x.sawyer.systems)  | [Preview](https://x.sawyer.systems/view/i22xo.png)  | [Preview](https://x.sawyer.systems/view/8xvq7.m4a) |
 
 ## Features
 
