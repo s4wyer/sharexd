@@ -102,7 +102,10 @@ def upload():
     uploaded_file.seek(0)
 
     mime_type = magic.from_buffer(file_header, mime=True)
-    uploaded_file = replace_image_metadata(uploaded_file, mime_type)
+    try:
+        uploaded_file = replace_image_metadata(uploaded_file, mime_type)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
     # secure_filename should never ever be needed because we generate a new file name
     # but better safe than sorry
