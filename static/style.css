@@ -1,3 +1,12 @@
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('GeistMono-VariableFont_wght.woff2') format('woff2');
+
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+
 :root {
   --bg-base: rgb(10, 10, 10);
   --bg-surface: rgb(15, 15, 15);
@@ -16,9 +25,10 @@
 body {
   background-color: var(--bg-base);
   color: var(--fg-base);
-  font-family: Consolas, Menlo, Monaco, monospace;
+  font-family: SFMono-regular, 'Geist Mono', ui-monospace, Consolas, Menlo, Monaco, monospace;
   font-size: 14px;
-  line-height: 1.2;
+  font-weight: 500;
+  line-height: 1.25;
   padding: 2rem;
   margin: 0;
 }
@@ -55,6 +65,7 @@ pre {
   margin: 0;
   white-space: pre-wrap;
   max-width: 50ch;
+  font-family: inherit;
 }
 
 .logo {

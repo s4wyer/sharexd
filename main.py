@@ -198,11 +198,12 @@ def view_file(path):
         **kwargs
     ))
 
-    # get the stylesheet url so we can whitelist it
+    # get the stylesheet and font urls so we can whitelist them
     style_url = url_for('static', filename='style.css', _external=True)
+    font_url = url_for('static', filename='GeistMono-VariableFont_wght.woff2', _external=True)
     # completely kneecap the browser
     # basically only allow file viewing, downloading, and loading a single stylesheet (plus a nonced inline script for custom players)
-    response.headers['Content-Security-Policy'] = f"default-src 'none'; img-src 'self'; media-src 'self'; style-src {style_url} 'unsafe-inline'; script-src 'nonce-{script_nonce}'; sandbox allow-downloads allow-popups allow-scripts allow-same-origin"
+    response.headers['Content-Security-Policy'] = f"default-src 'none'; img-src 'self'; media-src 'self'; style-src {style_url} 'unsafe-inline'; script-src 'nonce-{script_nonce}'; font-src {font_url}; sandbox allow-downloads allow-popups allow-scripts allow-same-origin"
 
     return response
 
