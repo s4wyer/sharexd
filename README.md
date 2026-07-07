@@ -45,7 +45,7 @@ Main Page                            | Image Viewer                             
    ```bash
    flask --app main run --host=0.0.0.0 --port=5000
    ```
-5. (Optional) Set up S3 support in .env (example configuration for R2 [here](docs/r2_setup.md))
+5. (Optional) Set up S3 support in your `.env` (example configuration for R2 [here](docs/r2_setup.md))
 
 ## Uploading Files
 
@@ -55,7 +55,7 @@ There are multiple ways to upload files from your devices:
 
 1. Bash Script ([sxd.sh](sxd.sh))
 
-The project includes a shell script. Install `jq`, then run the script to generate a config and upload files. It supports configuring variables via an `.sxdrc` file, which is created the first time you run the script.
+The project includes a shell script. It supports configuring variables via an `.sxdrc` file, which is created the first time you run the script. Pass file names as arguments.
 
 ```bash
 ./sxd.sh abc123.txt def456.txt
@@ -81,4 +81,4 @@ The response will provide the path to the uploaded file, and a unique deletion p
 
 ## License
 
-This project is licensed under the GNU Affero General Public License v3.0 - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the GNU Affero General Public License v3.0 - see [LICENSE.md](LICENSE.md) for details.
