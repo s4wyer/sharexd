@@ -6,7 +6,7 @@ import magic
 
 from config import Config
 from extensions import limiter, storage
-from utils.security import generate_delete_token
+from utils.security import generate_delete_token, is_valid_token
 from utils.metadata import replace_image_metadata
 from utils import generate_filename
 
@@ -20,13 +20,8 @@ def upload():
     if not auth_header:
         return jsonify({"error": "Missing Authorization header."}), 401
 
-    expected_token = Config.UPLOAD_TOKEN
-
-    if not expected_token:
-        return jsonify({"error": "No secret token. Check your .env."}), 401
-
-    if not hmac.compare_digest(auth_header, expected_token):
-        return jsonify({"error": "Invalid Authorization token."}), 401
+    if not is_valid_token(auth_header):
+        return jsonify({"error": "Invalid Authorization token. Check your .env or users file."}), 401
     
     if 'file' not in request.files:
         return jsonify({"error": "No file provided."}), 400           
@@ -66,7 +61,9 @@ def delete_file(filename, timestamp, token):
     safe_path = secure_filename(filename)
     expected = generate_delete_token(safe_path, timestamp)
 
-    if not hmac.compare_digest(expected, token):
+    is_master_key = Config.MASTER_KEY and Config.MASTER_KEY != "default_insecure_master_key" and hmac.compare_digest(Config.MASTER_KEY, token)
+
+    if not (hmac.compare_digest(expected, token) or is_master_key):
         return jsonify({"error": "Invalid delete token."}), 403
 
     if request.method == 'GET':

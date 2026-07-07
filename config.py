@@ -14,7 +14,8 @@ class Config:
     S3_SECRET_ACCESS_KEY = os.environ.get("S3_SECRET_ACCESS_KEY")
     S3_REGION = os.environ.get("S3_REGION", "us-east-1")
     
-    UPLOAD_TOKEN = os.environ.get("UPLOAD_TOKEN", "")
+    USERS_FILE = os.environ.get("USERS_FILE", "users.json")
+    MASTER_KEY = os.environ.get("MASTER_KEY", "default_insecure_master_key")
     
     ABUSE_EMAIL = os.environ.get("ABUSE_EMAIL", "abuse@yourdomain.com")
     ADMIN_HANDLE = os.environ.get("ADMIN_HANDLE", "your_handle")

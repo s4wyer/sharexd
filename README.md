@@ -29,9 +29,10 @@ Main Page                            | Image Viewer                             
    cd sharexd
    ```
 
-2. Copy the example environment file and set your custom values (especially the upload token).
+2. Copy the example config files and set your custom values (especially your user password and `MASTER_KEY`).
    ```bash
    cp .env.example .env
+   cp users.json.example users.json
    ```
 
 3. Install dependencies. I use uv for dependency management, but pip works fine.

@@ -17,3 +17,4 @@ wheels/
 # Application files
 uploads
 s3_stats.json
+users.json
