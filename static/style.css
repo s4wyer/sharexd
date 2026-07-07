@@ -10,6 +10,7 @@
   --accent-blue: rgb(86, 156, 214);
   --accent-green: rgb(166, 226, 46);
   --accent-orange: rgb(209, 154, 102);
+  color-scheme: dark;
 }
 
 body {
@@ -19,9 +20,13 @@ body {
   font-size: 14px;
   line-height: 1.2;
   padding: 2rem;
-  margin: 0px;
-  display: flex;
-  justify-content: center;
+  margin: 0;
+}
+
+body>pre,
+body>.file-viewer {
+  margin-left: auto;
+  margin-right: auto;
 }
 
 ::-webkit-scrollbar {
@@ -41,13 +46,13 @@ body {
   background: var(--accent-blue);
 }
 
-* {
+:root {
   scrollbar-width: thin;
   scrollbar-color: var(--border-color) var(--bg-surface);
 }
 
 pre {
-  margin: 0px;
+  margin: 0;
   white-space: pre-wrap;
   max-width: 50ch;
 }
@@ -92,6 +97,7 @@ a:hover {
   align-items: flex-start;
   max-width: 50ch;
   width: 100%;
+  margin: 0 auto;
 }
 
 .file-frame {
@@ -106,7 +112,6 @@ a:hover {
   height: auto;
   border: 1px solid var(--border-color);
   image-rendering: auto;
-  color-scheme: dark;
 }
 
 .custom-player {
@@ -115,7 +120,7 @@ a:hover {
   gap: 0.75rem;
   border: 1px solid var(--border-color);
   padding: 1rem;
-  width: 112%;
+  width: 56ch;
   box-sizing: border-box;
   background-color: var(--bg-surface);
 }
@@ -205,7 +210,6 @@ a:hover {
   height: 54px;
   border: 1px solid var(--border-color);
   border-radius: 0;
-  color-scheme: dark;
 }
 
 .file-frame video::-webkit-media-controls-panel,
@@ -292,4 +296,36 @@ a:hover {
 .text-file-content {
   overflow: auto;
   max-height: 75vh;
+  max-width: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) var(--bg-surface);
+}
+
+@media (max-width: 600px) {
+  body {
+    padding: 1rem;
+    font-size: 12px;
+  }
+
+  pre {
+    max-width: 100%;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .custom-player {
+    width: 100%;
+  }
+
+  .file-actions {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 400px) {
+  body {
+    padding: 0.5rem;
+    font-size: 10px;
+  }
 }
