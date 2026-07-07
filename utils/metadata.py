@@ -81,20 +81,6 @@ REPLACEMENT_SOFTWARE = [
 ]
 
 
-def to_deg(value, loc):
-    if value < 0:
-        loc_value = loc[0]
-    elif value > 0:
-        loc_value = loc[1]
-    else:
-        loc_value = loc[0]
-    
-    abs_value = abs(value)
-    d = int(abs_value)
-    m = int((abs_value - d) * 60)
-    s = (abs_value - d - m / 60.0) * 3600
-    
-    return loc_value, ((d, 1), (m, 1), (int(s * 10000), 10000))
 
 def replace_image_metadata(file_stream, mime_type):
     if os.environ.get("REMOVE_IMAGE_METADATA", "false").lower() not in ("true", "1", "yes"):
@@ -126,14 +112,12 @@ def replace_image_metadata(file_stream, mime_type):
             
         gps_ifd = new_exif.get_ifd(ExifTags.IFD.GPSInfo)
         lat, lon = random.choice(REPLACEMENT_GPS)
-        lat_ref, lat_deg = to_deg(lat, ["S", "N"])
-        lon_ref, lon_deg = to_deg(lon, ["W", "E"])
         
         gps_ifd[0] = (2, 2, 0, 0)  # GPSVersionID
-        gps_ifd[1] = lat_ref
-        gps_ifd[2] = lat_deg
-        gps_ifd[3] = lon_ref
-        gps_ifd[4] = lon_deg
+        gps_ifd[1] = "N" if lat >= 0 else "S"
+        gps_ifd[2] = abs(lat)
+        gps_ifd[3] = "E" if lon >= 0 else "W"
+        gps_ifd[4] = abs(lon)
             
         # keep original date tags
         original_exif = img.getexif()

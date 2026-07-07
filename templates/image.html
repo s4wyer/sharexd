@@ -1,5 +1,5 @@
 {% extends 'viewer.html' %}
 
 {% block file_display %}
-					<img src="{{ url_for('deliver_file', path=filename) }}" alt="{{ filename }}">
+					<img src="{{ url_for('files.deliver_file', path=filename) }}" alt="{{ filename }}">
 {% endblock %}

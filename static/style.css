@@ -132,6 +132,7 @@ a:hover {
   border: 1px solid var(--border-color);
   padding: 1rem;
   width: 56ch;
+  max-width: 100%;
   box-sizing: border-box;
   background-color: var(--bg-surface);
 }
@@ -308,6 +309,8 @@ a:hover {
   overflow: auto;
   max-height: 75vh;
   max-width: 100%;
+  width: 100%;
+  min-width: 0;
   scrollbar-width: thin;
   scrollbar-color: var(--border-color) var(--bg-surface);
 }

@@ -2,7 +2,7 @@
 
 {% block file_display %}
 					<audio id="audio-player" style="display: none !important;">
-						<source src="{{ url_for('deliver_file', path=filename) }}" type="{{ mime_type }}">
+						<source src="{{ url_for('files.deliver_file', path=filename) }}" type="{{ mime_type }}">
 					</audio>
 					
 					<div id="custom-player" class="custom-player" style="display: none;">
@@ -26,7 +26,7 @@
 
 					<noscript>
 						<audio controls class="native-audio">
-							<source src="{{ url_for('deliver_file', path=filename) }}" type="{{ mime_type }}">
+							<source src="{{ url_for('files.deliver_file', path=filename) }}" type="{{ mime_type }}">
 						</audio>
 					</noscript>
 

@@ -5,7 +5,7 @@
 {% block meta %}
 <meta property="og:title" content="sharexd - {{ filename }}">
 <meta property="og:url" content="{{ request.url }}">
-<meta property="og:image" content="{{ url_for('deliver_file', path=filename, _external=True, _scheme='https')  }}">
+<meta property="og:image" content="{{ url_for('files.deliver_file', path=filename, _external=True, _scheme='https')  }}">
 <meta name="twitter:card" content="summary_large_image">
 <meta property="og:type" content="website">
 {% endblock %}
@@ -13,7 +13,7 @@
 {% block content %}
 <div class="file-viewer">
 	<pre>
-<a href="{{ url_for('index') }}" class="logo-link">{% include '_logo_small.html' %}</a>
+<a href="{{ url_for('home.index') }}" class="logo-link">{% include '_logo_small.html' %}</a>
 ==================================================
 :: FILE VIEWER ::
 ==================================================
@@ -34,9 +34,9 @@ Type         : {{ mime_type }}
 :: ACTIONS ::
 ======================================================</pre>
 	<div class="file-actions">
-		<a href="{{ url_for('deliver_file', path=filename) }}?download" download="{{ filename }}">[download]</a>
-		<a href="{{ url_for('deliver_file', path=filename) }}" target="_blank">[open raw]</a>
-		<a href="{{ url_for('index') }}">[back to index]</a>
+		<a href="{{ url_for('files.deliver_file', path=filename) }}?download" download="{{ filename }}">[download]</a>
+		<a href="{{ url_for('files.deliver_file', path=filename) }}" target="_blank">[open raw]</a>
+		<a href="{{ url_for('home.index') }}">[back to index]</a>
 	</div>
 </div>
 {% endblock %}

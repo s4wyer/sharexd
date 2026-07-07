@@ -21,7 +21,6 @@ def generate_filename(buffer, check_exists_func=None):
             if not check_exists_func(filename):
                 return filename
         else:
-            # Fallback to local check if no func provided
             search_pattern = os.path.join("uploads", f"{file_id}.*")
             if not glob.glob(search_pattern):
                 return filename
