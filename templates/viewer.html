@@ -18,6 +18,8 @@
 :: FILE VIEWER ::
 ==================================================
 File         : {{ filename }}
+Original     : {{ original_filename }}
+Uploader     : {{ uploader }}
 Uploaded     : {{ uploaded_at }}
 Size         : {{ file_size }}
 Type         : {{ mime_type }}
@@ -34,7 +36,7 @@ Type         : {{ mime_type }}
 :: ACTIONS ::
 ======================================================</pre>
 	<div class="file-actions">
-		<a href="{{ url_for('files.deliver_file', path=filename) }}?download" download="{{ filename }}">[download]</a>
+		<a href="{{ url_for('files.deliver_file', path=filename) }}?download" download="{{ original_filename }}">[download]</a>
 		<a href="{{ url_for('files.deliver_file', path=filename) }}" target="_blank">[open raw]</a>
 		<a href="{{ url_for('home.index') }}">[back to index]</a>
 	</div>

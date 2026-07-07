@@ -21,7 +21,7 @@ class StorageProvider:
     def get_metadata(self, filename) -> dict:
         raise NotImplementedError
 
-    def stream(self, filename, force_download=False):
+    def stream(self, filename, force_download=False, download_name=None):
         raise NotImplementedError
 
     def read(self, filename) -> bytes:
@@ -71,13 +71,18 @@ class LocalStorageProvider(StorageProvider):
             'uploaded_at': uploaded_at,
         }
 
-    def stream(self, filename, force_download=False):
+    def stream(self, filename, force_download=False, download_name=None):
         safe_path = secure_filename(filename)
+        kwargs = {
+            'as_attachment': force_download,
+            'conditional': True
+        }
+        if force_download and download_name:
+            kwargs['download_name'] = download_name
         return make_response(send_from_directory(
             self.upload_folder,
             safe_path,
-            as_attachment=force_download,
-            conditional=True
+            **kwargs
         ))
 
     def read(self, filename) -> bytes:
@@ -172,7 +177,7 @@ class S3StorageProvider(StorageProvider):
             'uploaded_at': uploaded_at,
         }
 
-    def stream(self, filename, force_download=False):
+    def stream(self, filename, force_download=False, download_name=None):
         from flask import request
         
         extra_args = {}
@@ -198,10 +203,11 @@ class S3StorageProvider(StorageProvider):
         status = 206 if 'ContentRange' in response else 200
         flask_response = Response(generate(), status=status, mimetype=response.get('ContentType', 'application/octet-stream'))
         
+        dl_name = download_name if download_name else filename
         if force_download:
-            flask_response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+            flask_response.headers["Content-Disposition"] = f"attachment; filename={dl_name}"
         else:
-            flask_response.headers["Content-Disposition"] = f"inline; filename={filename}"
+            flask_response.headers["Content-Disposition"] = f"inline; filename={dl_name}"
             
         flask_response.headers["Content-Length"] = str(response.get('ContentLength', 0))
         

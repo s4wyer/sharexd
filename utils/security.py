@@ -11,7 +11,7 @@ def generate_delete_token(filename: str, timestamp: int) -> str:
 
 def get_valid_tokens() -> dict:
     tokens = {}
-    if Config.MASTER_KEY and Config.MASTER_KEY != "default_insecure_master_key":
+    if Config.MASTER_KEY and Config.MASTER_KEY != "SUPER_SECRET_MASTER_KEY_HERE":
         tokens[Config.MASTER_KEY] = "admin"
         
     if os.path.exists(Config.USERS_FILE):

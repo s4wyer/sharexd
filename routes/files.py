@@ -28,12 +28,26 @@ def view_file(path):
 
     script_nonce = secrets.token_urlsafe(16)
 
+    meta_json_bytes = storage.read(f"{safe_path}.meta.json")
+    user = "anonymous"
+    original_filename = safe_path
+    if meta_json_bytes:
+        import json
+        try:
+            meta_dict = json.loads(meta_json_bytes.decode('utf-8'))
+            user = meta_dict.get('user', 'anonymous')
+            original_filename = meta_dict.get('original_filename', safe_path)
+        except Exception:
+            pass
+
     kwargs = {
         'filename': safe_path,
+        'original_filename': original_filename,
         'uploaded_at': metadata['uploaded_at'],
         'file_size': metadata['file_size'],
         'mime_type': mime_type,
-        'nonce': script_nonce
+        'nonce': script_nonce,
+        'uploader': user
     }
 
     if template_name == 'text.html':
@@ -76,7 +90,18 @@ def deliver_file(path):
     # instead of viewed
     force_download = 'download' in request.args
 
-    response = make_response(storage.stream(safe_path, force_download=force_download))
+    original_filename = safe_path
+    if force_download:
+        meta_json_bytes = storage.read(f"{safe_path}.meta.json")
+        if meta_json_bytes:
+            import json
+            try:
+                meta_dict = json.loads(meta_json_bytes.decode('utf-8'))
+                original_filename = meta_dict.get('original_filename', safe_path)
+            except Exception:
+                pass
+
+    response = make_response(storage.stream(safe_path, force_download=force_download, download_name=original_filename))
 
     response.headers['Content-Security-Policy'] = "default-src 'none'; img-src *; media-src *; sandbox allow-downloads"
     response.headers['Access-Control-Allow-Origin'] = '*'

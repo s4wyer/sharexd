@@ -15,10 +15,10 @@ class Config:
     S3_REGION = os.environ.get("S3_REGION", "us-east-1")
     
     USERS_FILE = os.environ.get("USERS_FILE", "users.json")
-    MASTER_KEY = os.environ.get("MASTER_KEY", "default_insecure_master_key")
+    MASTER_KEY = os.environ.get("MASTER_KEY", "SUPER_SECRET_MASTER_KEY_HERE")
     
     ABUSE_EMAIL = os.environ.get("ABUSE_EMAIL", "abuse@yourdomain.com")
     ADMIN_HANDLE = os.environ.get("ADMIN_HANDLE", "your_handle")
     GITHUB_URL = os.environ.get("GITHUB_URL", "https://github.com/s4wyer/sharexd")
     
-    VERSION = "v1.1.3"
+    VERSION = "v1.2.0"

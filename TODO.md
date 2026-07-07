@@ -10,10 +10,10 @@
   - [x] Unknown files
 
 # Security
+  - [ ] Option to disallow executables
   - [x] Implement upload tokens
     - [x] Multiple tokens for different users
     - [x] Single token
-  - [ ] Option to disallow executables
   - [x] Rate-limiting with flask-limiter
   - [x] Deliver HTML as text/plain
 

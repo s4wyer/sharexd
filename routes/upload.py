@@ -6,9 +6,11 @@ import magic
 
 from config import Config
 from extensions import limiter, storage
-from utils.security import generate_delete_token, is_valid_token
+from utils.security import generate_delete_token, is_valid_token, get_username_from_token
 from utils.metadata import replace_image_metadata
 from utils import generate_filename
+import json
+import io
 
 upload_bp = Blueprint('upload', __name__)
 
@@ -45,6 +47,14 @@ def upload():
 
     storage.save(uploaded_file, new_filename)
 
+    username = get_username_from_token(auth_header)
+    meta_json = json.dumps({
+        "user": username,
+        "original_filename": uploaded_file.filename
+    }).encode('utf-8')
+    meta_file = io.BytesIO(meta_json)
+    storage.save(meta_file, f"{new_filename}.meta.json")
+
     filename = new_filename
 
     url = url_for('files.view_file', path=filename)
@@ -61,7 +71,7 @@ def delete_file(filename, timestamp, token):
     safe_path = secure_filename(filename)
     expected = generate_delete_token(safe_path, timestamp)
 
-    is_master_key = Config.MASTER_KEY and Config.MASTER_KEY != "default_insecure_master_key" and hmac.compare_digest(Config.MASTER_KEY, token)
+    is_master_key = Config.MASTER_KEY and Config.MASTER_KEY != "SUPER_SECRET_MASTER_KEY_HERE" and hmac.compare_digest(Config.MASTER_KEY, token)
 
     if not (hmac.compare_digest(expected, token) or is_master_key):
         return jsonify({"error": "Invalid delete token."}), 403
@@ -75,6 +85,7 @@ def delete_file(filename, timestamp, token):
         return jsonify({"error": "File not found."}), 404
 
     storage.delete(safe_path)
+    storage.delete(f"{safe_path}.meta.json")
     
     if request.method == 'POST':
         return render_template('delete.html', filename=safe_path, deleted=True)
