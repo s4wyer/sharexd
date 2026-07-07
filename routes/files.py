@@ -31,19 +31,23 @@ def view_file(path):
     meta_json_bytes = storage.read(f"{safe_path}.meta.json")
     user = "anonymous"
     original_filename = safe_path
+    uploaded_at = metadata['uploaded_at']
     if meta_json_bytes:
         import json
         try:
             meta_dict = json.loads(meta_json_bytes.decode('utf-8'))
             user = meta_dict.get('user', 'anonymous')
             original_filename = meta_dict.get('original_filename', safe_path)
+            if 'uploaded_at' in meta_dict:
+                from datetime import datetime
+                uploaded_at = datetime.fromtimestamp(meta_dict['uploaded_at']).strftime('%Y-%m-%d %H:%M:%S')
         except Exception:
             pass
 
     kwargs = {
         'filename': safe_path,
         'original_filename': original_filename,
-        'uploaded_at': metadata['uploaded_at'],
+        'uploaded_at': uploaded_at,
         'file_size': metadata['file_size'],
         'mime_type': mime_type,
         'nonce': script_nonce,

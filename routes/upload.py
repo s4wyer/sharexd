@@ -48,9 +48,11 @@ def upload():
     storage.save(uploaded_file, new_filename)
 
     username = get_username_from_token(auth_header)
+    timestamp = int(time.time())
     meta_json = json.dumps({
         "user": username,
-        "original_filename": uploaded_file.filename
+        "original_filename": uploaded_file.filename,
+        "uploaded_at": timestamp
     }).encode('utf-8')
     meta_file = io.BytesIO(meta_json)
     storage.save(meta_file, f"{new_filename}.meta.json")
@@ -59,7 +61,6 @@ def upload():
 
     url = url_for('files.view_file', path=filename)
 
-    timestamp = int(time.time())
     delete_token = generate_delete_token(filename, timestamp)
     delete_url = url_for('upload.delete_file', filename=filename, timestamp=timestamp, token=delete_token)
 
