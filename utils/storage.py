@@ -42,7 +42,11 @@ class LocalStorageProvider(StorageProvider):
 
     def save(self, file_object, filename):
         safe_path = os.path.join(self.upload_folder, filename)
-        file_object.save(safe_path)
+        if hasattr(file_object, 'save'):
+            file_object.save(safe_path)
+        else:
+            with open(safe_path, 'wb') as f:
+                f.write(file_object.read())
 
     def exists(self, filename) -> bool:
         safe_path = secure_filename(filename)

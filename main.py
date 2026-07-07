@@ -6,6 +6,8 @@ import time
 from pathlib import Path
 from utils import generate_filename
 from utils.storage import LocalStorageProvider, S3StorageProvider
+from utils.metadata import replace_image_metadata
+import magic
 from flask import Flask, render_template, request, jsonify, make_response, url_for
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -98,6 +100,9 @@ def upload():
     file_header = uploaded_file.read(2048)
     # reset the buffer, otherwise the first 2048 bytes will be lost upon saving
     uploaded_file.seek(0)
+
+    mime_type = magic.from_buffer(file_header, mime=True)
+    uploaded_file = replace_image_metadata(uploaded_file, mime_type)
 
     # secure_filename should never ever be needed because we generate a new file name
     # but better safe than sorry

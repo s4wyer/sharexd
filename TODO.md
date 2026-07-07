@@ -1,5 +1,4 @@
 # Viewers
-  - [ ] Unknown files
   - [ ] Archives
   - [ ] Markdown (no html)
   - [ ] PDFs (pdf.js)
@@ -8,6 +7,7 @@
   - [ ] Show metadata for media files
   - [-] Text
     - [ ] Syntax highlighting
+  - [x] Unknown files
 
 # Security
   - [-] Implement upload tokens
@@ -29,7 +29,7 @@
 # Design
   - [ ] Add server uptime to the index page
   - [ ] Running `curl` should return the same information as displayed in the <pre> tag instead of returning html
-  - [ ] Audio player with a waveform
+  - [ ] Audio player waveform
 
 # Functionality
   - [ ] Pass an X-Compress: true header to compress images to webp, audio to opus, and video to vp9 (webm)
