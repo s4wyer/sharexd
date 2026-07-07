@@ -9,11 +9,17 @@ Main Page                            | Image Viewer                             
 
 ## Features
 
-- Simple interface, only a little bloat.
-- S3 or local storage support.
-- Automatic .sxcu generation (just fill in your access token).
-- Token-based authentication.
-- Heavily restricted CSP headers for viewing files, and attempts to serve potentially dangerous files as plain text to avoid any potential XSS attacks.
+- Audio, text and image viewers.
+- Simple interface, only a little bit of bloat.
+- Support for S3-compatible storage  and local storage with statistics on the home page.
+- Token-based authentication, secure CSP headers, and plain text serving for potentially dangerous files to prevent XSS.
+- Automatic `.sxcu` generation for ShareX, a bash script ([sxd.sh](sxd.sh)), and an Apple Shortcut for iOS/macOS.
+- Unique deletion keys generated on upload.
+
+## Prerequisites
+
+- Python 3.14 or newer
+- `uv` (recommended) or `pip`
 
 ## Setup
 
@@ -28,7 +34,7 @@ Main Page                            | Image Viewer                             
    cp .env.example .env
    ```
 
-3. Install dependencies. I use uv for dependency management (but pip works fine).
+3. Install dependencies. I use uv for dependency management, but pip works fine.
    ```bash
    uv sync
    # or using pip:
@@ -45,11 +51,21 @@ Main Page                            | Image Viewer                             
 
 Just go to wherever you have the project running to find a ShareX config.
 
-The project also includes a script called [sxd.sh](sxd.sh). Install jq, run the script to generate a config and upload files with:
+There are multiple ways to upload files from your devices:
+
+1. Bash Script ([sxd.sh](sxd.sh))
+
+The project includes a shell script. Install `jq`, then run the script to generate a config and upload files. It supports configuring variables via an `.sxdrc` file, which is created the first time you run the script.
 
 ```bash
 ./sxd.sh abc123.txt def456.txt
 ```
+
+2. Apple Shortcut
+
+You can also use the [ShareXD Apple Shortcut](https://www.icloud.com/shortcuts/43fb07c9c48d4445b675fb07363a516f) to upload files from iOS or macOS.
+
+3. API (cURL)
 
 Uploads require the `Authorization` header to match your configured `UPLOAD_TOKEN`.
 
@@ -57,12 +73,12 @@ Uploads require the `Authorization` header to match your configured `UPLOAD_TOKE
 curl -X POST -H "Authorization: YOUR_SECRET_TOKEN_HERE" -F "file=@yourfile.png" http://localhost:5000/upload
 ```
 
-The response will provide the URL to the uploaded file:
+The response will provide the path to the uploaded file, and a unique deletion path:
+
 ```json
-{"url": "/abc123def456.txt"}
+{"url": "/view/abc12.txt", "delete_url": "/delete/abc12.txt/abcdef"}
 ```
 
-Images return a link to a viewer:
-```json
-{"url": "/view/abc123def456.txt"}
-```
+## License
+
+This project is licensed under the GNU Affero General Public License v3.0 - see the [LICENSE.md](LICENSE.md) file for details.
