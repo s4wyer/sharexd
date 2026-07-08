@@ -44,7 +44,10 @@ Main Page                            | Image Viewer                             
 
 4. Run the server
    ```bash
-   flask --app main run --host=0.0.0.0 --port=5000
+   # Production
+   make prod
+   # Development
+   make dev
    ```
 5. (Optional) Set up S3 support in your `.env` (example configuration for R2 [here](docs/r2_setup.md))
 
