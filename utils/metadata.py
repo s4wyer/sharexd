@@ -82,6 +82,8 @@ REPLACEMENT_SOFTWARE = [
 
 
 
+TAG_TO_ID = {v: k for k, v in ExifTags.TAGS.items()}
+
 def replace_image_metadata(file_stream, mime_type):
     if os.environ.get("REMOVE_IMAGE_METADATA", "false").lower() not in ("true", "1", "yes"):
         return file_stream
@@ -102,13 +104,12 @@ def replace_image_metadata(file_stream, mime_type):
             raise ValueError("Unknown image format")
             
         new_exif = Image.Exif()
-        tag_to_id = {v: k for k, v in ExifTags.TAGS.items()}
         
         make_val, model_val = random.choice(REPLACEMENT_DEVICES)
-        new_exif[tag_to_id["Make"]] = make_val
-        new_exif[tag_to_id["Model"]] = model_val
+        new_exif[TAG_TO_ID["Make"]] = make_val
+        new_exif[TAG_TO_ID["Model"]] = model_val
         
-        new_exif[tag_to_id["Software"]] = random.choice(REPLACEMENT_SOFTWARE)
+        new_exif[TAG_TO_ID["Software"]] = random.choice(REPLACEMENT_SOFTWARE)
             
         gps_ifd = new_exif.get_ifd(ExifTags.IFD.GPSInfo)
         lat, lon = random.choice(REPLACEMENT_GPS)
@@ -121,12 +122,12 @@ def replace_image_metadata(file_stream, mime_type):
             
         # keep original date tags
         original_exif = img.getexif()
-        if tag_to_id.get("DateTime") in original_exif:
-            new_exif[tag_to_id["DateTime"]] = original_exif[tag_to_id["DateTime"]]
+        if TAG_TO_ID.get("DateTime") in original_exif:
+            new_exif[TAG_TO_ID["DateTime"]] = original_exif[TAG_TO_ID["DateTime"]]
             
         # keep Orientation so images don't display sideways
-        if tag_to_id.get("Orientation") in original_exif:
-            new_exif[tag_to_id["Orientation"]] = original_exif[tag_to_id["Orientation"]]
+        if TAG_TO_ID.get("Orientation") in original_exif:
+            new_exif[TAG_TO_ID["Orientation"]] = original_exif[TAG_TO_ID["Orientation"]]
             
         original_exif_ifd = original_exif.get_ifd(ExifTags.IFD.Exif)
         new_exif_ifd = new_exif.get_ifd(ExifTags.IFD.Exif)
@@ -137,7 +138,7 @@ def replace_image_metadata(file_stream, mime_type):
             "SubSecTime", "SubSecTimeOriginal", "SubSecTimeDigitized"
         ]
         for tag_name in date_tags:
-            tag_id = tag_to_id.get(tag_name)
+            tag_id = TAG_TO_ID.get(tag_name)
             if tag_id and tag_id in original_exif_ifd:
                 new_exif_ifd[tag_id] = original_exif_ifd[tag_id]
 
