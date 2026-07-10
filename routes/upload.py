@@ -49,13 +49,25 @@ def upload():
 
     username = get_username_from_token(auth_header)
     timestamp = int(time.time())
-    meta_json = json.dumps({
+    from extensions import meta_db
+    meta_data = {
         "user": username,
         "original_filename": uploaded_file.filename,
         "uploaded_at": timestamp
-    }).encode('utf-8')
-    meta_file = io.BytesIO(meta_json)
-    storage.save(meta_file, f"{new_filename}.meta.json")
+    }
+
+    if mime_type and mime_type.startswith('image/') and mime_type != 'image/svg+xml':
+        try:
+            from PIL import Image
+            uploaded_file.seek(0)
+            with Image.open(uploaded_file) as img:
+                meta_data["image_size"] = [img.width, img.height]
+            uploaded_file.seek(0)
+        except Exception as e:
+            print(f"Error getting image size: {e}")
+            uploaded_file.seek(0)
+
+    meta_db.set(new_filename, meta_data)
 
     filename = new_filename
 
@@ -86,7 +98,8 @@ def delete_file(filename, timestamp, token):
         return jsonify({"error": "File not found."}), 404
 
     storage.delete(safe_path)
-    storage.delete(f"{safe_path}.meta.json")
+    from extensions import meta_db
+    meta_db.delete(safe_path)
     
     if request.method == 'POST':
         return render_template('delete.html', filename=safe_path, deleted=True)

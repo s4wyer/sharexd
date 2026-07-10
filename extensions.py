@@ -3,6 +3,7 @@ from pathlib import Path
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from utils.storage import LocalStorageProvider, S3StorageProvider
+from utils.meta_db import MetaDB
 from config import Config
 
 limiter = Limiter(
@@ -22,3 +23,5 @@ if Config.STORAGE_BACKEND == "s3":
 else:
     Path(Config.UPLOAD_FOLDER).mkdir(parents=True, exist_ok=True)
     storage = LocalStorageProvider(folder=Config.UPLOAD_FOLDER)
+
+meta_db = MetaDB(path="meta.lmdb")

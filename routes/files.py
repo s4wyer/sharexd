@@ -6,10 +6,61 @@ from extensions import limiter, storage
 
 files_bp = Blueprint('files', __name__)
 
+def ensure_metadata(safe_path, mime_type=None, basic_metadata=None):
+    from extensions import meta_db
+    meta_dict = meta_db.get(safe_path)
+    if meta_dict is None:
+        meta_dict = {}
+
+    needs_update = False
+
+    if 'user' not in meta_dict:
+        meta_dict['user'] = 'anonymous'
+        needs_update = True
+        
+    if 'original_filename' not in meta_dict:
+        meta_dict['original_filename'] = safe_path
+        needs_update = True
+
+    if 'uploaded_at' not in meta_dict:
+        if basic_metadata and basic_metadata.get('uploaded_at') and basic_metadata['uploaded_at'] != 'Unknown':
+            try:
+                from datetime import datetime
+                dt = datetime.strptime(basic_metadata['uploaded_at'], '%Y-%m-%d %H:%M:%S')
+                meta_dict['uploaded_at'] = int(dt.timestamp())
+            except Exception:
+                import time
+                meta_dict['uploaded_at'] = int(time.time())
+        else:
+            import time
+            meta_dict['uploaded_at'] = int(time.time())
+        needs_update = True
+
+    if mime_type and mime_type.startswith('image/') and mime_type != 'image/svg+xml' and 'image_size' not in meta_dict:
+        try:
+            from PIL import Image
+            import io
+            content = storage.read(safe_path)
+            if content:
+                with Image.open(io.BytesIO(content)) as img:
+                    meta_dict['image_size'] = [img.width, img.height]
+                needs_update = True
+        except Exception:
+            pass
+
+    if needs_update:
+        meta_db.set(safe_path, meta_dict)
+        
+    return meta_dict
+
+
 @files_bp.route('/view/<path:path>')
 @limiter.limit("3000 per minute")
 def view_file(path):
     safe_path = secure_filename(path)
+    
+    if safe_path.startswith('BACKUP-'):
+        return jsonify({"error": "File not found."}), 404
 
     metadata = storage.get_metadata(safe_path)
     if not metadata:
@@ -28,21 +79,15 @@ def view_file(path):
 
     script_nonce = secrets.token_urlsafe(16)
 
-    meta_json_bytes = storage.read(f"{safe_path}.meta.json")
-    user = "anonymous"
-    original_filename = safe_path
+    meta_dict = ensure_metadata(safe_path, mime_type, metadata)
+    user = meta_dict.get('user', 'anonymous')
+    original_filename = meta_dict.get('original_filename', safe_path)
+    image_size = meta_dict.get('image_size')
+    
     uploaded_at = metadata['uploaded_at']
-    if meta_json_bytes:
-        import json
-        try:
-            meta_dict = json.loads(meta_json_bytes.decode('utf-8'))
-            user = meta_dict.get('user', 'anonymous')
-            original_filename = meta_dict.get('original_filename', safe_path)
-            if 'uploaded_at' in meta_dict:
-                from datetime import datetime
-                uploaded_at = datetime.fromtimestamp(meta_dict['uploaded_at']).strftime('%Y-%m-%d %H:%M:%S')
-        except Exception:
-            pass
+    if 'uploaded_at' in meta_dict:
+        from datetime import datetime
+        uploaded_at = datetime.fromtimestamp(meta_dict['uploaded_at']).strftime('%Y-%m-%d %H:%M:%S')
 
     kwargs = {
         'filename': safe_path,
@@ -51,7 +96,8 @@ def view_file(path):
         'file_size': metadata['file_size'],
         'mime_type': mime_type,
         'nonce': script_nonce,
-        'uploader': user
+        'uploader': user,
+        'image_size': image_size
     }
 
     if template_name == 'text.html':
@@ -90,20 +136,19 @@ def view_file(path):
 @limiter.limit("3000 per minute")
 def deliver_file(path):
     safe_path = secure_filename(path)
+    
+    if safe_path.startswith('BACKUP-'):
+        return jsonify({"error": "File not found."}), 404
+        
     # if the user appends ?download, it will be sent as an attachment that will be downloaded
     # instead of viewed
     force_download = 'download' in request.args
 
     original_filename = safe_path
-    if force_download:
-        meta_json_bytes = storage.read(f"{safe_path}.meta.json")
-        if meta_json_bytes:
-            import json
-            try:
-                meta_dict = json.loads(meta_json_bytes.decode('utf-8'))
-                original_filename = meta_dict.get('original_filename', safe_path)
-            except Exception:
-                pass
+    metadata = storage.get_metadata(safe_path)
+    if metadata:
+        meta_dict = ensure_metadata(safe_path, metadata.get('mime_type'), metadata)
+        original_filename = meta_dict.get('original_filename', safe_path)
 
     response = make_response(storage.stream(safe_path, force_download=force_download, download_name=original_filename))
 
