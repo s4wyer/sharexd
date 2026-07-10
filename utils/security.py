@@ -4,12 +4,19 @@ import json
 import os
 from config import Config
 
+_cached_tokens = None
+
 def generate_delete_token(filename: str, timestamp: int) -> str:
     secret = Config.MASTER_KEY.encode() if Config.MASTER_KEY else b"default_secret"
     msg = f"{filename}:{timestamp}".encode()
     return hmac.new(secret, msg, hashlib.sha256).hexdigest()
 
 def get_valid_tokens() -> dict:
+    global _cached_tokens
+    
+    if _cached_tokens is not None:
+        return _cached_tokens
+
     tokens = {}
     if Config.MASTER_KEY and Config.MASTER_KEY != "SUPER_SECRET_MASTER_KEY_HERE":
         tokens[Config.MASTER_KEY] = "admin"
@@ -23,6 +30,7 @@ def get_valid_tokens() -> dict:
         except Exception:
             pass
             
+    _cached_tokens = tokens
     return tokens
 
 def is_valid_token(token: str) -> bool:
