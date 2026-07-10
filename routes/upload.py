@@ -1,4 +1,5 @@
 import time
+import random
 from flask import Blueprint, request, jsonify, render_template, url_for
 from werkzeug.utils import secure_filename
 import hmac
@@ -23,6 +24,7 @@ def upload():
         return jsonify({"error": "Missing Authorization header."}), 401
 
     if not is_valid_token(auth_header):
+        time.sleep(random.uniform(5, 10))
         return jsonify({"error": "Invalid Authorization token. Check your .env or users file."}), 401
     
     if 'file' not in request.files:
