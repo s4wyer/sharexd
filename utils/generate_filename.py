@@ -17,6 +17,16 @@ def generate_filename(buffer, check_exists_func=None):
         file_id = ''.join(random.choices(chars, k=length))
         filename = f"{file_id}{file_extension}"
         
+        # make sure the filename doesn't collide with tarpit routes
+        from config import Config
+        if getattr(Config, 'TARPIT_ENABLED', True):
+            try:
+                from routes.tarpit import ALL_ROUTES
+                if f"/{filename}" in ALL_ROUTES:
+                    continue
+            except ImportError:
+                pass
+
         if check_exists_func:
             if not check_exists_func(filename):
                 return filename

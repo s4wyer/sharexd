@@ -28,6 +28,10 @@ def create_app():
     app.register_blueprint(home_bp)
     app.register_blueprint(upload_bp)
     app.register_blueprint(files_bp)
+    
+    if app.config.get('TARPIT_ENABLED', True):
+        from routes.tarpit import tarpit_bp
+        app.register_blueprint(tarpit_bp)
 
     return app
 

@@ -21,4 +21,6 @@ class Config:
     ADMIN_HANDLE = os.environ.get("ADMIN_HANDLE", "your_handle")
     GITHUB_URL = os.environ.get("GITHUB_URL", "https://github.com/s4wyer/sharexd")
     
+    TARPIT_ENABLED = str(os.environ.get("TARPIT_ENABLED", "true")).lower() in ("true", "1", "yes", "t")
+    
     VERSION = "v1.2.0"
