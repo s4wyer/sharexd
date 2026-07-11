@@ -21,8 +21,7 @@ services:
       
       - ./users.json:/app/users.json
 
-      # Uncomment the following line if you use S3 and want to persist s3_stats.json on the host
-      # - ./s3_stats.json:/app/s3_stats.json
+
 
 volumes:
   sharexd_uploads:

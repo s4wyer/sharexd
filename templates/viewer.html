@@ -5,8 +5,12 @@
 {% block meta %}
 <meta property="og:title" content="sharexd - {{ filename }}">
 <meta property="og:url" content="{{ request.url }}">
+{% if mime_type and mime_type.startswith('image/') %}
 <meta property="og:image" content="{{ url_for('files.deliver_file', path=filename, _external=True, _scheme='https')  }}">
 <meta name="twitter:card" content="summary_large_image">
+{% else %}
+<meta name="twitter:card" content="summary">
+{% endif %}
 <meta property="og:type" content="website">
 {% endblock %}
 

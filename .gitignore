@@ -16,7 +16,7 @@ wheels/
 
 # Application files
 uploads
-s3_stats.json
+
 users.json
 meta.lmdb/
 meta.lmdb_backup_tmp/

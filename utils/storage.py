@@ -37,8 +37,6 @@ class LocalStorageProvider(StorageProvider):
     def __init__(self, folder):
         self.upload_folder = folder
         os.makedirs(self.upload_folder, exist_ok=True)
-        self._cached_stats = None
-        self._last_stats_update = 0
 
     def save(self, file_object, filename):
         safe_path = os.path.join(self.upload_folder, filename)
@@ -47,6 +45,14 @@ class LocalStorageProvider(StorageProvider):
         else:
             with open(safe_path, 'wb') as f:
                 f.write(file_object.read())
+
+        from extensions import meta_db
+        stats = meta_db.get('_internal:local_stats')
+        if stats is not None:
+            file_size = os.path.getsize(safe_path)
+            stats['total_files'] = stats.get('total_files', 0) + 1
+            stats['storage_used_bytes'] = stats.get('storage_used_bytes', 0) + file_size
+            meta_db.set('_internal:local_stats', stats)
 
     def exists(self, filename) -> bool:
         safe_path = secure_filename(filename)
@@ -97,24 +103,43 @@ class LocalStorageProvider(StorageProvider):
         safe_path = secure_filename(filename)
         full_path = os.path.join(self.upload_folder, safe_path)
         if os.path.isfile(full_path):
+            file_size = os.path.getsize(full_path)
             os.remove(full_path)
+            
+            from extensions import meta_db
+            stats = meta_db.get('_internal:local_stats')
+            if stats is not None:
+                stats['total_files'] = max(0, stats.get('total_files', 1) - 1)
+                stats['storage_used_bytes'] = max(0, stats.get('storage_used_bytes', file_size) - file_size)
+                meta_db.set('_internal:local_stats', stats)
 
     def get_stats(self) -> dict:
         if not os.path.exists(self.upload_folder):
             return {'total_files': 0, 'storage_used': '0 B'}
             
-        current_time = time.time()
-        # cache for 5 minutes to prevent an I/O DOS attack
-        if self._cached_stats is None or current_time - self._last_stats_update > 300:
-            files_count = len(os.listdir(self.upload_folder))
-            storage_size = get_storage_info.pretty_dir_size(self.upload_folder)
-            self._cached_stats = {
-                'total_files': files_count,
-                'storage_used': storage_size
+        from extensions import meta_db
+        from utils.get_storage_info import get_pretty_bytes
+        
+        stats = meta_db.get('_internal:local_stats')
+        
+        if stats is None:
+            total_size = 0
+            total_files = 0
+            with os.scandir(self.upload_folder) as it:
+                for entry in it:
+                    if entry.is_file(follow_symlinks=False):
+                        total_size += entry.stat(follow_symlinks=False).st_size
+                        total_files += 1
+            stats = {
+                'total_files': total_files,
+                'storage_used_bytes': total_size
             }
-            self._last_stats_update = current_time
+            meta_db.set('_internal:local_stats', stats)
             
-        return self._cached_stats
+        return {
+            'total_files': stats.get('total_files', 0),
+            'storage_used': get_pretty_bytes(stats.get('storage_used_bytes', 0))
+        }
 
 class S3StorageProvider(StorageProvider):
     def __init__(self, bucket, endpoint, access_key, secret_key, region):
@@ -126,7 +151,6 @@ class S3StorageProvider(StorageProvider):
             aws_secret_access_key=secret_key,
             region_name=region
         )
-        self._stats_file = "s3_stats.json"
         self._stats_lock = threading.Lock()
 
     def save(self, file_object, filename):
@@ -136,6 +160,8 @@ class S3StorageProvider(StorageProvider):
             extra_args['ContentType'] = mime_type
 
         # s3 expects seek(0) before upload if we read the file
+        file_object.seek(0, os.SEEK_END)
+        file_size = file_object.tell()
         file_object.seek(0)
         self.s3.upload_fileobj(
             file_object,
@@ -144,6 +170,13 @@ class S3StorageProvider(StorageProvider):
             ExtraArgs=extra_args,
             Config=TransferConfig(use_threads=False)
         )
+
+        from extensions import meta_db
+        stats = meta_db.get('_internal:s3_stats')
+        if stats is not None:
+            stats['total_files'] = stats.get('total_files', 0) + 1
+            stats['storage_used_bytes'] = stats.get('storage_used_bytes', 0) + file_size
+            meta_db.set('_internal:s3_stats', stats)
 
     def exists(self, filename) -> bool:
         try:
@@ -229,61 +262,66 @@ class S3StorageProvider(StorageProvider):
 
     def delete(self, filename):
         try:
+            from extensions import meta_db
+            stats = meta_db.get('_internal:s3_stats')
+            file_size = 0
+            if stats is not None:
+                try:
+                    response = self.s3.head_object(Bucket=self.bucket, Key=filename)
+                    file_size = response.get('ContentLength', 0)
+                except ClientError:
+                    pass
+            
             self.s3.delete_object(Bucket=self.bucket, Key=filename)
+            
+            if stats is not None and file_size > 0:
+                stats['total_files'] = max(0, stats.get('total_files', 1) - 1)
+                stats['storage_used_bytes'] = max(0, stats.get('storage_used_bytes', file_size) - file_size)
+                meta_db.set('_internal:s3_stats', stats)
         except ClientError:
             pass
 
     def get_stats(self) -> dict:
-        def update_stats_task():
-            total_size = 0
-            total_files = 0
-            paginator = self.s3.get_paginator('list_objects_v2')
-            try:
-                for page in paginator.paginate(Bucket=self.bucket):
-                    if 'Contents' in page:
-                        for obj in page['Contents']:
-                            total_files += 1
-                            total_size += obj['Size']
-                
-                storage_size = get_storage_info.get_pretty_bytes(total_size)
-                stats = {
-                    'total_files': total_files,
-                    'storage_used': storage_size
-                }
-                temp_file = f"{self._stats_file}.{threading.get_ident()}.tmp"
-                with open(temp_file, 'w') as f:
-                    json.dump(stats, f)
-                os.replace(temp_file, self._stats_file)
-            except ClientError:
-                pass
+        from extensions import meta_db
+        stats = meta_db.get('_internal:s3_stats')
+        last_update = meta_db.get('_internal:s3_stats_last_update') or 0
+        
+        if not stats or time.time() - last_update > 21600:
+            def update_stats_task():
+                total_size = 0
+                total_files = 0
+                paginator = self.s3.get_paginator('list_objects_v2')
+                try:
+                    for page in paginator.paginate(Bucket=self.bucket):
+                        if 'Contents' in page:
+                            for obj in page['Contents']:
+                                total_files += 1
+                                total_size += obj['Size']
+                    
+                    new_stats = {
+                        'total_files': total_files,
+                        'storage_used_bytes': total_size
+                    }
+                    meta_db.set('_internal:s3_stats', new_stats)
+                    meta_db.set('_internal:s3_stats_last_update', time.time())
+                except ClientError:
+                    pass
 
-        file_exists = os.path.exists(self._stats_file)
-        is_stale = True
-
-        if file_exists:
-            mtime = os.path.getmtime(self._stats_file)
-            if time.time() - mtime < 300:  # 5 minutes
-                is_stale = False
-
-        if not file_exists or is_stale:
             with self._stats_lock:
-                # double check inside the lock to avoid multiple threads running simultaneously
-                mtime = os.path.getmtime(self._stats_file) if os.path.exists(self._stats_file) else 0
-                if time.time() - mtime >= 300 or not os.path.exists(self._stats_file):
-                    # touch the file to update mtime and stop other workers from starting threads
-                    with open(self._stats_file, 'a'):
-                        os.utime(self._stats_file, None)
+                last_update = meta_db.get('_internal:s3_stats_last_update') or 0
+                if time.time() - last_update >= 21600 or not stats:
+                    meta_db.set('_internal:s3_stats_last_update', time.time())
                     
                     thread = threading.Thread(target=update_stats_task)
                     thread.daemon = True
                     thread.start()
 
-        if file_exists:
-            try:
-                with open(self._stats_file, 'r') as f:
-                    return json.load(f)
-            except (json.JSONDecodeError, IOError):
-                pass
+        if stats:
+            from utils.get_storage_info import get_pretty_bytes
+            return {
+                'total_files': stats.get('total_files', 0),
+                'storage_used': get_pretty_bytes(stats.get('storage_used_bytes', 0))
+            }
                 
         return {
             'total_files': 'Calculating...',
