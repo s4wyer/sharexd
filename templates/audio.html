@@ -1,123 +1,543 @@
 {% extends 'viewer.html' %}
 
 {% block file_display %}
-					<audio id="audio-player" style="display: none !important;">
-						<source src="{{ url_for('files.deliver_file', path=filename) }}" type="{{ mime_type }}">
-					</audio>
-					
-					<div id="custom-player" class="custom-player" style="display: none;">
-						<div class="player-header">
-							<span class="player-title">&gt; {{ original_filename }}</span>
-							<span id="time-display" class="player-time">00:00 / 00:00</span>
-						</div>
-						<div id="progress-container" class="player-progress-container">
-							<div id="progress-bar" class="player-progress-bar"></div>
-						</div>
-						<div class="player-controls">
-							<a href="#" id="play-btn" class="player-btn">[ play  ]</a>
-							<div class="player-spacer"></div>
-							<span class="player-vol-label">vol</span>
-							<div id="volume-container" class="player-volume-container">
-								<div id="volume-bar" class="player-progress-bar" style="width: 100%;"></div>
-							</div>
-							<a href="#" id="mute-btn" class="player-btn">[ mute   ]</a>
-						</div>
-					</div>
+<audio id="audio-player" style="display: none !important;">
+	<source src="{{ url_for('files.deliver_file', path=filename) }}" type="{{ mime_type }}">
+</audio>
 
-					<noscript>
-						<audio controls class="native-audio">
-							<source src="{{ url_for('files.deliver_file', path=filename) }}" type="{{ mime_type }}">
-						</audio>
-					</noscript>
+<div id="custom-player" class="custom-player" style="display: none;">
+	<div class="player-header">
+		<span class="player-title">&gt; {{ original_filename }}</span>
+		<span id="time-display" class="player-time">00:00 / 00:00</span>
+	</div>
+	<div id="progress-container" class="player-progress-container" role="slider" aria-label="Seek slider" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+		<div id="progress-bar" class="player-progress-bar"></div>
+	</div>
+	<canvas id="canvas-analyzer" class="canvas-analyzer"></canvas>
+	<div class="player-controls">
+		<button type="button" id="play-btn" class="player-btn">[ play  ]</button>
+		<div class="player-spacer"></div>
+		<span class="player-vol-label">vol</span>
+		<div id="volume-container" class="player-volume-container" role="slider" aria-label="Volume slider" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
+			<div id="volume-bar" class="player-progress-bar" style="width: 100%;"></div>
+		</div>
+		<button type="button" id="mute-btn" class="player-btn">[ mute   ]</button>
+	</div>
+</div>
 
-					<script nonce="{{ nonce }}">
-						document.getElementById('custom-player').style.display = 'flex';
-						
-						const audio = document.getElementById('audio-player');
-						const playBtn = document.getElementById('play-btn');
-						const timeDisplay = document.getElementById('time-display');
-						const progressContainer = document.getElementById('progress-container');
-						const progressBar = document.getElementById('progress-bar');
-						const muteBtn = document.getElementById('mute-btn');
-						const volumeContainer = document.getElementById('volume-container');
-						const volumeBar = document.getElementById('volume-bar');
+<noscript>
+	<audio controls class="native-audio">
+	<source src="{{ url_for('files.deliver_file', path=filename) }}" type="{{ mime_type }}">
+	</audio>
+</noscript>
 
-						playBtn.addEventListener('click', (e) => {
-							e.preventDefault();
-							if (audio.paused) {
-								audio.play();
-								playBtn.innerText = '[ pause ]';
-							} else {
-								audio.pause();
-								playBtn.innerText = '[ play  ]';
-							}
-						});
+<script nonce="{{ nonce }}">
+(() => {
+	document.getElementById('custom-player').style.display = 'flex';
+	
+	const audio = document.getElementById('audio-player');
+	const playBtn = document.getElementById('play-btn');
+	const timeDisplay = document.getElementById('time-display');
+	const progressContainer = document.getElementById('progress-container');
+	const progressBar = document.getElementById('progress-bar');
+	const muteBtn = document.getElementById('mute-btn');
+	const volumeContainer = document.getElementById('volume-container');
+	const volumeBar = document.getElementById('volume-bar');
+	const canvas = document.getElementById('canvas-analyzer');
+	const ctx = canvas.getContext('2d');
+	
+	let audioCtx;
+	let analyser;
+	let source;
+	let dataArray;
+	let analyzerInitialized = false;
 
-						function formatTime(seconds) {
-							if (isNaN(seconds) || !isFinite(seconds)) return "00:00";
-							const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-							const s = Math.floor(seconds % 60).toString().padStart(2, '0');
-							return `${m}:${s}`;
-						}
+	const computedStyle = getComputedStyle(document.documentElement);
+	function parseRgb(colorStr) {
+		const match = colorStr ? colorStr.match(/\d+/g) : null;
+		return match && match.length >= 3 ? { r: parseInt(match[0]), g: parseInt(match[1]), b: parseInt(match[2]) } : null;
+	}
+	
+	const greenRgb = parseRgb(computedStyle.getPropertyValue('--accent-green')) || {r: 166, g: 226, b: 46};
+	
+	function rgbToHue(r, g, b) {
+		r /= 255; g /= 255; b /= 255;
+		let max = Math.max(r, g, b), min = Math.min(r, g, b);
+		let h = 0;
+		if (max !== min) {
+			let d = max - min;
+			switch (max) {
+				case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+				case g: h = (b - r) / d + 2; break;
+				case b: h = (r - g) / d + 4; break;
+			}
+			h /= 6;
+		}
+		return Math.round(h * 360);
+	}
+	
+	const baseHue = rgbToHue(greenRgb.r, greenRgb.g, greenRgb.b);
 
-						audio.addEventListener('loadedmetadata', () => {
-							timeDisplay.innerText = `${formatTime(0)} / ${formatTime(audio.duration)}`;
-						});
+	const VISUAL_CONFIG = {
+		numBars: 64,
+		blockHeight: 4,
+		blockGap: 2,
+		barWidth: 6,
+		numRings: 18,
+		pointsPerRing: 12,
+		baseRadius: 6.0,
+		tunnelHue: baseHue,
+		camSpeedX: 0.7,
+		camSpeedY: 0.5,
+		camAmp: 4.5,
+		camCurveFreqX: 0.15,
+		camCurveFreqY: 0.1,
+		spinSpeed: 0.28,
+		trackStrength: 0.3,
+		projScale: 0.9,
+		distOffset: 1.5,
+		baseSpeed: 0.015,
+		flightBaseSpeed: 0.15,
+		bassFlightMult: 0.05,
+		bassHueMult: 1.5,
+		bassAlphaBase: 0.4,
+		bassAlphaMult: 0.6,
+		starCount: 300,
+		starMinRadius: 8,
+		starMaxRadius: 15
+	};
 
-						audio.addEventListener('timeupdate', () => {
-							timeDisplay.innerText = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
-							if (isFinite(audio.duration) && audio.duration > 0) {
-								const progress = (audio.currentTime / audio.duration) * 100;
-								progressBar.style.width = `${progress}%`;
-							}
-						});
+	let barPeaks = new Array(VISUAL_CONFIG.numBars).fill(0);
+	
+	let time = 0;
+	let flightDistance = 0;
+	let currentBass = 0;
+	let particles = [];
+	let isScrubbingProgress = false;
 
-						progressContainer.addEventListener('click', (e) => {
-							const rect = progressContainer.getBoundingClientRect();
-							const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-							const dur = isFinite(audio.duration) ? audio.duration : (audio.seekable && audio.seekable.length ? audio.seekable.end(audio.seekable.length - 1) : 0);
-							
-							if (dur > 0) {
-								audio.currentTime = pos * dur;
-							}
-						});
+	for (let i = 0; i < VISUAL_CONFIG.starCount; i++) {
+		const angle = Math.random() * Math.PI * 2;
+		const radius = VISUAL_CONFIG.starMinRadius + Math.random() * VISUAL_CONFIG.starMaxRadius;
+		particles.push({
+			x: Math.cos(angle) * radius,
+			y: Math.sin(angle) * radius,
+			baseZ: Math.random() * (VISUAL_CONFIG.numRings * 2)
+		});
+	}
 
-						audio.addEventListener('volumechange', () => {
-							muteBtn.innerText = audio.muted || audio.volume === 0 ? '[ unmute ]' : '[ mute   ]';
-							volumeBar.style.width = audio.muted ? '0%' : `${audio.volume * 100}%`;
-						});
+	function resizeCanvas() {
+		const rect = canvas.getBoundingClientRect();
+		const dpr = window.devicePixelRatio || 1;
+		canvas.width = rect.width * dpr;
+		
+		const rawHeight = rect.height * dpr;
+		const gridSize = VISUAL_CONFIG.blockHeight + VISUAL_CONFIG.blockGap;
+		canvas.height = Math.ceil(rawHeight / gridSize) * gridSize;
+		
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+	}
+	window.addEventListener('resize', resizeCanvas);
+	resizeCanvas();
+	drawAnalyzer();
 
-						muteBtn.addEventListener('click', (e) => {
-							e.preventDefault();
-							audio.muted = !audio.muted;
-						});
+	function initAnalyzer() {
+		if (analyzerInitialized) return;
+		
+		audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+		analyser = audioCtx.createAnalyser();
+		analyser.smoothingTimeConstant = 0.85;
+		
+		source = audioCtx.createMediaElementSource(audio);
+		source.connect(analyser);
+		analyser.connect(audioCtx.destination);
+		
+		analyser.fftSize = 512;
+		const bufferLength = analyser.frequencyBinCount;
+		dataArray = new Uint8Array(bufferLength);
+		
+		canvas.classList.add('active');
+		resizeCanvas();
+		analyzerInitialized = true;
+	}
 
-						volumeContainer.addEventListener('click', (e) => {
-							const rect = volumeContainer.getBoundingClientRect();
-							const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-							audio.volume = pos;
-							if (pos > 0) audio.muted = false;
-						});
-						
-						document.addEventListener('keydown', (e) => {
-							if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+	function applyMotionBlur() {
+		ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
+	}
 
-							if (e.key === ' ') {
-								e.preventDefault();
-								playBtn.click();
-							} else if (e.key === 'ArrowRight') {
-								e.preventDefault();
-								const dur = isFinite(audio.duration) ? audio.duration : (audio.seekable && audio.seekable.length ? audio.seekable.end(audio.seekable.length - 1) : audio.currentTime + 5);
-								audio.currentTime = Math.min(audio.currentTime + 5, dur);
-							} else if (e.key === 'ArrowLeft') {
-								e.preventDefault();
-								audio.currentTime = Math.max(audio.currentTime - 5, 0);
-							}
-						});
+	function updatePhysics() {
+		let bassPulse = 0;
+		if (analyzerInitialized && !audio.paused) {
+			analyser.getByteFrequencyData(dataArray);
+			
+			let bassSum = 0;
+			for (let i = 0; i < 5; i++) bassSum += dataArray[i];
+			let bassAvg = bassSum / (5 * 255); 
+			
+			bassPulse = Math.max(0, bassAvg - 0.8) / 0.2; 
+		}
+		
+		currentBass += (Math.pow(bassPulse, 2) - currentBass) * 0.2;
+		
+		let physicsSpeed = audio.paused ? 0.5 : 1.0;
+		
+		time += VISUAL_CONFIG.baseSpeed * physicsSpeed; 
+		flightDistance += (VISUAL_CONFIG.flightBaseSpeed + (currentBass * VISUAL_CONFIG.bassFlightMult)) * physicsSpeed; 
+	}
 
-						audio.addEventListener('ended', () => {
-							playBtn.innerText = '[ play  ]';
-							progressBar.style.width = '0%';
-						});
-					</script>
+	function getCamera() {
+		return {
+			camX: Math.sin(time * VISUAL_CONFIG.camSpeedX) * VISUAL_CONFIG.camAmp,
+			camY: Math.cos(time * VISUAL_CONFIG.camSpeedY) * VISUAL_CONFIG.camAmp,
+			slopeX: Math.cos(time * VISUAL_CONFIG.camSpeedX) * VISUAL_CONFIG.camCurveFreqX * VISUAL_CONFIG.camAmp * VISUAL_CONFIG.trackStrength,
+			slopeY: -Math.sin(time * VISUAL_CONFIG.camSpeedY) * VISUAL_CONFIG.camCurveFreqY * VISUAL_CONFIG.camAmp * VISUAL_CONFIG.trackStrength
+		};
+	}
+
+	function drawBlockLine(x0, y0, x1, y1, tunnelHue, alpha) {
+		const maxRows = Math.floor(canvas.height / (VISUAL_CONFIG.blockHeight + VISUAL_CONFIG.blockGap));
+		let c0 = Math.floor(x0 / VISUAL_CONFIG.barWidth);
+		let r0 = Math.floor(y0 / (VISUAL_CONFIG.blockHeight + VISUAL_CONFIG.blockGap));
+		let c1 = Math.floor(x1 / VISUAL_CONFIG.barWidth);
+		let r1 = Math.floor(y1 / (VISUAL_CONFIG.blockHeight + VISUAL_CONFIG.blockGap));
+		
+		let dx = Math.abs(c1 - c0), dy = Math.abs(r1 - r0);
+		let sx = (c0 < c1) ? 1 : -1, sy = (r0 < r1) ? 1 : -1;
+		let err = dx - dy;
+		
+		ctx.fillStyle = `hsla(${tunnelHue}, 76%, 53%, ${alpha})`;
+		
+		let steps = 0;
+		while (steps++ < 200) {
+			if (c0 >= 0 && c0 < VISUAL_CONFIG.numBars && r0 >= 0 && r0 < maxRows) {
+				const drawX = c0 * VISUAL_CONFIG.barWidth + 1;
+				const drawY = r0 * (VISUAL_CONFIG.blockHeight + VISUAL_CONFIG.blockGap) + VISUAL_CONFIG.blockGap;
+				ctx.fillRect(drawX, drawY, VISUAL_CONFIG.barWidth - 2, VISUAL_CONFIG.blockHeight);
+			}
+			if (c0 === c1 && r0 === r1) break;
+			let e2 = 2 * err;
+			if (e2 > -dy) { err -= dy; c0 += sx; }
+			if (e2 < dx) { err += dx; r0 += sy; }
+		}
+	}
+
+	function drawTunnel(cam, tunnelHue, tunnelAlphaMult) {
+		const flightSpeed = flightDistance; 
+		
+		let allRings = [];
+		for (let i = 0; i < VISUAL_CONFIG.numRings; i++) {
+			let z = (i * 2 - flightSpeed) % (VISUAL_CONFIG.numRings * 2);
+			if (z < 0) z += (VISUAL_CONFIG.numRings * 2);
+			
+			const curveX = (Math.sin(time * VISUAL_CONFIG.camSpeedX + z * VISUAL_CONFIG.camCurveFreqX) * VISUAL_CONFIG.camAmp) - cam.camX;
+			const curveY = (Math.cos(time * VISUAL_CONFIG.camSpeedY + z * VISUAL_CONFIG.camCurveFreqY) * VISUAL_CONFIG.camAmp) - cam.camY;
+			
+			let points = [];
+			for (let p = 0; p < VISUAL_CONFIG.pointsPerRing; p++) {
+				const angle = (p / VISUAL_CONFIG.pointsPerRing) * Math.PI * 2;
+				const spin = time * VISUAL_CONFIG.spinSpeed; 
+				
+				let r = VISUAL_CONFIG.baseRadius;
+				
+				let px = Math.cos(angle + spin) * r + curveX;
+				let py = Math.sin(angle + spin) * r + curveY;
+				
+				px -= (z * cam.slopeX);
+				py -= (z * cam.slopeY);
+				
+				const distance = z + VISUAL_CONFIG.distOffset; 
+				const projX = px / distance;
+				const projY = py / distance;
+				
+				const scale = canvas.width * VISUAL_CONFIG.projScale;
+				const screenX = projX * scale + canvas.width / 2;
+				const screenY = projY * scale + canvas.height / 2;
+				
+				points.push({ x: screenX, y: screenY, z: distance });
+			}
+			allRings.push({ z, points });
+		}
+		
+		allRings.sort((a, b) => b.z - a.z);
+		
+		for (let i = 0; i < allRings.length; i++) {
+			const ring = allRings[i];
+			const alpha = Math.max(0, 1 - (ring.z / (VISUAL_CONFIG.numRings * 2))) * tunnelAlphaMult;
+			if (alpha <= 0.05) continue;
+			
+			for (let p = 0; p < VISUAL_CONFIG.pointsPerRing; p++) {
+				const pt1 = ring.points[p];
+				const pt2 = ring.points[(p + 1) % VISUAL_CONFIG.pointsPerRing];
+				drawBlockLine(pt1.x, pt1.y, pt2.x, pt2.y, tunnelHue, alpha);
+				
+				if (i > 0) {
+					const nextRing = allRings[i - 1];
+					const pt3 = nextRing.points[p];
+					drawBlockLine(pt1.x, pt1.y, pt3.x, pt3.y, tunnelHue, alpha);
+				}
+			}
+		}
+	}
+
+	function drawStarfield(cam) {
+		const flightSpeed = flightDistance; 
+		for (let i = 0; i < particles.length; i++) {
+			let p = particles[i];
+			
+			let z = (p.baseZ - flightSpeed) % (VISUAL_CONFIG.numRings * 2);
+			if (z < 0) z += (VISUAL_CONFIG.numRings * 2);
+			
+			const curveX = (Math.sin(time * VISUAL_CONFIG.camSpeedX + z * VISUAL_CONFIG.camCurveFreqX) * VISUAL_CONFIG.camAmp) - cam.camX;
+			const curveY = (Math.cos(time * VISUAL_CONFIG.camSpeedY + z * VISUAL_CONFIG.camCurveFreqY) * VISUAL_CONFIG.camAmp) - cam.camY;
+			
+			let px = p.x + curveX;
+			let py = p.y + curveY;
+			
+			px -= (z * cam.slopeX);
+			py -= (z * cam.slopeY);
+			
+			const distance = z + VISUAL_CONFIG.distOffset;
+			const projX = px / distance;
+			const projY = py / distance;
+			
+			const scale = canvas.width * VISUAL_CONFIG.projScale;
+			const screenX = projX * scale + canvas.width / 2;
+			const screenY = projY * scale + canvas.height / 2;
+			
+			const alpha = Math.max(0, 1 - (z / (VISUAL_CONFIG.numRings * 2)));
+			
+			if (screenX >= 0 && screenX <= canvas.width && screenY >= 0 && screenY <= canvas.height) {
+				ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+				ctx.fillRect(screenX, screenY, 2, 2);
+			}
+		}
+	}
+
+	function drawEqualizer() {
+		if (analyzerInitialized) {
+			const usefulBins = Math.floor(dataArray.length * 0.6);
+			const step = usefulBins / VISUAL_CONFIG.numBars;
+			
+			const maxEqHeight = Math.min(canvas.height, 250); 
+			
+			const gradient = ctx.createLinearGradient(0, canvas.height - maxEqHeight, 0, canvas.height);
+			gradient.addColorStop(0, 'rgba(255, 34, 34, 0.6)');
+			gradient.addColorStop(0.10, 'rgba(255, 34, 34, 0.6)');
+			gradient.addColorStop(0.101, 'rgba(255, 204, 0, 0.6)');
+			gradient.addColorStop(0.30, 'rgba(255, 204, 0, 0.6)');
+			gradient.addColorStop(0.301, `rgba(${greenRgb.r}, ${greenRgb.g}, ${greenRgb.b}, 0.6)`);
+			gradient.addColorStop(1, `rgba(${greenRgb.r}, ${greenRgb.g}, ${greenRgb.b}, 0.6)`);
+			
+			ctx.globalCompositeOperation = 'screen';
+			ctx.fillStyle = gradient;
+			
+			for (let i = 0; i < VISUAL_CONFIG.numBars; i++) {
+				const binIndex = Math.floor(i * step);
+				let value = audio.paused ? 0 : (dataArray[binIndex] || 0);
+				
+				const eqCurve = 0.6 + (i / VISUAL_CONFIG.numBars) * 1.0; 
+				const percent = Math.min(1, (value * eqCurve) / 255);
+				const targetHeight = percent * maxEqHeight;
+				
+				if (targetHeight > barPeaks[i]) {
+					barPeaks[i] += (targetHeight - barPeaks[i]) * 0.25; 
+				} else {
+					barPeaks[i] *= 0.94; 
+				}
+				
+				const barHeight = Math.max(0, barPeaks[i]);
+				const numBlocks = Math.floor(barHeight / (VISUAL_CONFIG.blockHeight + VISUAL_CONFIG.blockGap));
+				
+				for (let j = 0; j < numBlocks; j++) {
+					const y = canvas.height - j * (VISUAL_CONFIG.blockHeight + VISUAL_CONFIG.blockGap) - VISUAL_CONFIG.blockHeight;
+					ctx.fillRect(i * VISUAL_CONFIG.barWidth + 1, y, VISUAL_CONFIG.barWidth - 2, VISUAL_CONFIG.blockHeight);
+				}
+			}
+			ctx.globalCompositeOperation = 'source-over';
+		}
+	}
+
+	function drawAnalyzer() {
+		requestAnimationFrame(drawAnalyzer);
+		
+		applyMotionBlur();
+		updatePhysics();
+		
+		let tunnelHue = VISUAL_CONFIG.tunnelHue - (currentBass * VISUAL_CONFIG.tunnelHue * VISUAL_CONFIG.bassHueMult);
+		tunnelHue = Math.max(0, Math.min(VISUAL_CONFIG.tunnelHue, tunnelHue));
+		
+		const tunnelAlphaMult = Math.min(1, VISUAL_CONFIG.bassAlphaBase + (currentBass * VISUAL_CONFIG.bassAlphaMult));
+		
+		const cam = getCamera();
+		
+		drawTunnel(cam, tunnelHue, tunnelAlphaMult);
+		drawStarfield(cam);
+		drawEqualizer();
+	}
+
+	playBtn.addEventListener('click', () => {
+		if (!analyzerInitialized) {
+			initAnalyzer();
+		}
+		if (audioCtx && audioCtx.state === 'suspended') {
+			audioCtx.resume();
+		}
+		
+		if (audio.paused) {
+			audio.play();
+			playBtn.innerText = '[ pause ]';
+		} else {
+			audio.pause();
+			playBtn.innerText = '[ play  ]';
+		}
+	});
+			
+	function formatTime(seconds) {
+		if (isNaN(seconds) || !isFinite(seconds)) return "00:00";
+		const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+		const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+		return `${m}:${s}`;
+	}
+	
+	audio.addEventListener('loadedmetadata', () => {
+		timeDisplay.innerText = `${formatTime(0)} / ${formatTime(audio.duration)}`;
+	});
+	
+	audio.addEventListener('timeupdate', () => {
+		timeDisplay.innerText = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+		if (isFinite(audio.duration) && audio.duration > 0) {
+			const progress = (audio.currentTime / audio.duration) * 100;
+			progressBar.style.width = `${progress}%`;
+			progressContainer.setAttribute('aria-valuenow', Math.round(progress));
+		}
+	});
+	
+	let wasPlayingBeforeScrub = false;
+	
+	const updateProgressFromEvent = (e) => {
+		const rect = progressContainer.getBoundingClientRect();
+		const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+		const dur = isFinite(audio.duration) ? audio.duration : (audio.seekable && audio.seekable.length ? audio.seekable.end(audio.seekable.length - 1) : 0);
+		
+		if (dur > 0) {
+			audio.currentTime = pos * dur;
+		}
+	};
+
+	progressContainer.addEventListener('pointerdown', (e) => {
+		isScrubbingProgress = true;
+		wasPlayingBeforeScrub = !audio.paused;
+		if (wasPlayingBeforeScrub) {
+			audio.pause();
+		}
+		progressContainer.setPointerCapture(e.pointerId);
+		updateProgressFromEvent(e);
+	});
+	
+	progressContainer.addEventListener('pointermove', (e) => {
+		if (isScrubbingProgress) {
+			updateProgressFromEvent(e);
+		}
+	});
+	
+	const endScrubbing = (e) => {
+		if (isScrubbingProgress) {
+			isScrubbingProgress = false;
+			try { progressContainer.releasePointerCapture(e.pointerId); } catch(err) {}
+			if (wasPlayingBeforeScrub) {
+				audio.play().catch(() => {});
+			}
+		}
+	};
+
+	progressContainer.addEventListener('pointerup', endScrubbing);
+	progressContainer.addEventListener('pointercancel', endScrubbing);
+	
+	let lastKnownVolume = 1;
+
+	audio.addEventListener('volumechange', () => {
+		if (audio.volume > 0 && !audio.muted) {
+			lastKnownVolume = audio.volume;
+		}
+		const isMuted = audio.muted || audio.volume === 0;
+		muteBtn.innerText = isMuted ? '[ unmute ]' : '[ mute   ]';
+		volumeBar.style.width = isMuted ? '0%' : `${audio.volume * 100}%`;
+		volumeContainer.setAttribute('aria-valuenow', isMuted ? 0 : Math.round(audio.volume * 100));
+	});
+	
+	muteBtn.addEventListener('click', () => {
+		if (audio.muted || audio.volume === 0) {
+			audio.muted = false;
+			if (audio.volume === 0) {
+				audio.volume = lastKnownVolume || 1;
+			}
+		} else {
+			audio.muted = true;
+		}
+	});
+	
+	let isScrubbingVolume = false;
+
+	const updateVolumeFromEvent = (e) => {
+		const rect = volumeContainer.getBoundingClientRect();
+		const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+		audio.volume = pos;
+		if (pos > 0) audio.muted = false;
+	};
+
+	volumeContainer.addEventListener('pointerdown', (e) => {
+		isScrubbingVolume = true;
+		volumeContainer.setPointerCapture(e.pointerId);
+		updateVolumeFromEvent(e);
+	});
+
+	volumeContainer.addEventListener('pointermove', (e) => {
+		if (isScrubbingVolume) {
+			updateVolumeFromEvent(e);
+		}
+	});
+
+	volumeContainer.addEventListener('pointerup', (e) => {
+		isScrubbingVolume = false;
+		try { volumeContainer.releasePointerCapture(e.pointerId); } catch(err) {}
+	});
+
+	volumeContainer.addEventListener('pointercancel', (e) => {
+		isScrubbingVolume = false;
+		try { volumeContainer.releasePointerCapture(e.pointerId); } catch(err) {}
+	});
+	
+	document.addEventListener('keydown', (e) => {
+		if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+		
+		if (e.key === ' ') {
+			e.preventDefault();
+			playBtn.click();
+		} else if (e.key === 'ArrowRight') {
+			e.preventDefault();
+			const dur = isFinite(audio.duration) ? audio.duration : (audio.seekable && audio.seekable.length ? audio.seekable.end(audio.seekable.length - 1) : audio.currentTime + 5);
+			audio.currentTime = Math.min(audio.currentTime + 5, dur);
+		} else if (e.key === 'ArrowLeft') {
+			e.preventDefault();
+			audio.currentTime = Math.max(audio.currentTime - 5, 0);
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			audio.volume = Math.min(1, audio.volume + 0.1);
+			if (audio.volume > 0) audio.muted = false;
+		} else if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			audio.volume = Math.max(0, audio.volume - 0.1);
+		} else if (e.key.toLowerCase() === 'm') {
+			e.preventDefault();
+			muteBtn.click();
+		}
+	});
+	
+	audio.addEventListener('ended', () => {
+		playBtn.innerText = '[ play  ]';
+		progressBar.style.width = '0%';
+		progressContainer.setAttribute('aria-valuenow', '0');
+	});
+})();
+</script>
 {% endblock %}

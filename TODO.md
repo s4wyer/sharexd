@@ -29,7 +29,7 @@
 # Design
   - [ ] Add server uptime to the index page
   - [ ] Running `curl` should return the same information as displayed in the <pre> tag instead of returning html
-  - [ ] Audio player waveform
+  - [x] Audio player waveform
 
 # Functionality
   - [ ] Pass an X-Compress: true header to compress images to webp, audio to opus, and video to vp9 (webm)

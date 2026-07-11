@@ -26,4 +26,4 @@ class Config:
     
     TARPIT_ENABLED = str(os.environ.get("TARPIT_ENABLED", "true")).lower() in ("true", "1", "yes", "t")
     
-    VERSION = "v1.2.0"
+    VERSION = "v1.2.4"

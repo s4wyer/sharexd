@@ -18,7 +18,9 @@
 :: FILE VIEWER ::
 ==================================================
 File         : {{ filename }}
+{% if original_filename != filename -%}
 Original     : {{ original_filename }}
+{% endif -%}
 Uploader     : {{ uploader }}
 Uploaded     : {{ uploaded_at }}
 Size         : {{ file_size }}{% if image_size %} ({{ image_size[0] }}x{{ image_size[1] }}){% endif %}

@@ -33,7 +33,7 @@ Storage Used : {{ storage_used }}
 	"DeletionURL": "{{ base_url }}{json:delete_url}",
 	"ErrorMessage": "{json:error}"
 }</span>
-<a id="sxcu-download" href="#" class="sxcu-btn" title="Download sharexd.sxcu">[ download sharexd.sxcu ]</a>
+<button type="button" id="sxcu-download" class="sxcu-btn" title="Download sharexd.sxcu">[ download sharexd.sxcu ]</button>
 <script>
   (function () {
 			var baseUrl = {{ base_url | tojson }};
@@ -70,8 +70,7 @@ Storage Used : {{ storage_used }}
 							}, null, 2);
 						}
 						
-						link.addEventListener('click', function (e) {
-							e.preventDefault();
+						link.addEventListener('click', function () {
 							var tok = input.textContent.replace(/[\r\n]+/g, '').trim() || 'YOUR_SECRET_TOKEN_HERE';
 							var blob = new Blob([buildSxcu(tok)], { type: 'application/json' });
 							var url  = URL.createObjectURL(blob);
