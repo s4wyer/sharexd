@@ -6,7 +6,8 @@ import hmac
 import magic
 
 from config import Config
-from extensions import limiter, storage
+from extensions import limiter, storage, meta_db
+from PIL import Image
 from utils.security import generate_delete_token, is_valid_token, get_username_from_token
 from utils.metadata import replace_image_metadata
 from utils import generate_filename
@@ -24,7 +25,6 @@ def upload():
         return jsonify({"error": "Missing Authorization header."}), 401
 
     if not is_valid_token(auth_header):
-        time.sleep(random.uniform(5, 10))
         return jsonify({"error": "Invalid Authorization token. Check your .env or users file."}), 401
     
     if 'file' not in request.files:
@@ -47,11 +47,8 @@ def upload():
 
     new_filename = secure_filename(generate_filename.generate_filename(file_header, storage.exists))
 
-    storage.save(uploaded_file, new_filename)
-
     username = get_username_from_token(auth_header)
     timestamp = int(time.time())
-    from extensions import meta_db
     meta_data = {
         "user": username,
         "original_filename": uploaded_file.filename,
@@ -60,7 +57,6 @@ def upload():
 
     if mime_type and mime_type.startswith('image/') and mime_type != 'image/svg+xml':
         try:
-            from PIL import Image
             uploaded_file.seek(0)
             with Image.open(uploaded_file) as img:
                 meta_data["image_size"] = [img.width, img.height]
@@ -68,6 +64,8 @@ def upload():
         except Exception as e:
             print(f"Error getting image size: {e}")
             uploaded_file.seek(0)
+
+    storage.save(uploaded_file, new_filename)
 
     meta_db.set(new_filename, meta_data)
 
@@ -100,7 +98,6 @@ def delete_file(filename, timestamp, token):
         return jsonify({"error": "File not found."}), 404
 
     storage.delete(safe_path)
-    from extensions import meta_db
     meta_db.delete(safe_path)
     
     if request.method == 'POST':

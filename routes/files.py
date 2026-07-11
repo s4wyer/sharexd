@@ -2,12 +2,15 @@ from flask import Blueprint, request, jsonify, make_response, render_template, u
 from werkzeug.utils import secure_filename
 import secrets
 
-from extensions import limiter, storage
+from extensions import limiter, storage, meta_db
+from datetime import datetime
+from PIL import Image
+import time
+import io
 
 files_bp = Blueprint('files', __name__)
 
 def ensure_metadata(safe_path, mime_type=None, basic_metadata=None):
-    from extensions import meta_db
     meta_dict = meta_db.get(safe_path)
     if meta_dict is None:
         meta_dict = {}
@@ -25,21 +28,16 @@ def ensure_metadata(safe_path, mime_type=None, basic_metadata=None):
     if 'uploaded_at' not in meta_dict:
         if basic_metadata and basic_metadata.get('uploaded_at') and basic_metadata['uploaded_at'] != 'Unknown':
             try:
-                from datetime import datetime
                 dt = datetime.strptime(basic_metadata['uploaded_at'], '%Y-%m-%d %H:%M:%S')
                 meta_dict['uploaded_at'] = int(dt.timestamp())
             except Exception:
-                import time
                 meta_dict['uploaded_at'] = int(time.time())
         else:
-            import time
             meta_dict['uploaded_at'] = int(time.time())
         needs_update = True
 
     if mime_type and mime_type.startswith('image/') and mime_type != 'image/svg+xml' and 'image_size' not in meta_dict:
         try:
-            from PIL import Image
-            import io
             content = storage.read(safe_path)
             if content:
                 with Image.open(io.BytesIO(content)) as img:
@@ -86,7 +84,6 @@ def view_file(path):
     
     uploaded_at = metadata['uploaded_at']
     if 'uploaded_at' in meta_dict:
-        from datetime import datetime
         uploaded_at = datetime.fromtimestamp(meta_dict['uploaded_at']).strftime('%Y-%m-%d %H:%M:%S')
 
     kwargs = {
