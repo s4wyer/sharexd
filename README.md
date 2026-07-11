@@ -1,5 +1,7 @@
 # sharexd
 
+<a href='https://ko-fi.com/s4wyer_' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi5.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
+
 A minimalist, secure, self-hosted file sharing server built with Python and Flask.
 
 Main Page                            | Image Viewer                                        |  Audio Player |
