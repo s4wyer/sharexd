@@ -20,6 +20,9 @@ class Config:
     ABUSE_EMAIL = os.environ.get("ABUSE_EMAIL", "abuse@yourdomain.com")
     ADMIN_HANDLE = os.environ.get("ADMIN_HANDLE", "your_handle")
     GITHUB_URL = os.environ.get("GITHUB_URL", "https://github.com/s4wyer/sharexd")
+
+    DONATION_URL = os.environ.get("DONATION_URL")
+    DONATION_PLATFORM = os.environ.get("DONATION_PLATFORM")
     
     TARPIT_ENABLED = str(os.environ.get("TARPIT_ENABLED", "true")).lower() in ("true", "1", "yes", "t")
     

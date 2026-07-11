@@ -16,5 +16,7 @@ def index():
         storage_used=stats['storage_used'],
         abuse_email=Config.ABUSE_EMAIL,
         admin_handle=Config.ADMIN_HANDLE,
-        github_url=Config.GITHUB_URL
+        github_url=Config.GITHUB_URL,
+        donation_url=Config.DONATION_URL,
+        donation_platform=Config.DONATION_PLATFORM
     )
