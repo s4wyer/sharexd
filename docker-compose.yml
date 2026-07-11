@@ -1,0 +1,29 @@
+services:
+  sharexd:
+    build:
+      context: .
+    container_name: sharexd
+    init: true
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:5000/\")' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    env_file:
+      - .env
+    volumes:
+      - sharexd_uploads:/app/uploads
+      - sharexd_meta:/app/meta.lmdb
+      
+      - ./users.json:/app/users.json
+
+      # Uncomment the following line if you use S3 and want to persist s3_stats.json on the host
+      # - ./s3_stats.json:/app/s3_stats.json
+
+volumes:
+  sharexd_uploads:
+  sharexd_meta:

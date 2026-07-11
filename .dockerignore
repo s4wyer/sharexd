@@ -1,0 +1,11 @@
+.git
+.github
+.venv
+__pycache__
+*.pyc
+*.pyo
+.env
+.DS_Store
+uploads/
+meta.lmdb/
+s3_stats.json

@@ -51,6 +51,14 @@ Main Page                            | Image Viewer                             
    ```
 5. (Optional) Set up S3 support in your `.env` (example configuration for R2 [here](docs/r2_setup.md))
 
+## Docker Setup
+
+You can run sharexd using Docker Compose. After completing steps 1 and 2 from the setup above, run:
+
+```bash
+docker compose up -d --build
+```
+
 ## Uploading Files
 
 Just go to wherever you have the project running to find a ShareX config.
