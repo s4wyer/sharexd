@@ -15,8 +15,14 @@ class Config:
     S3_REGION = os.environ.get("S3_REGION", "us-east-1")
     
     USERS_FILE = os.environ.get("USERS_FILE", "users.json")
-    MASTER_KEY = os.environ.get("MASTER_KEY", "SUPER_SECRET_MASTER_KEY_HERE")
-    SECRET_KEY = os.environ.get("SECRET_KEY", "fallback_secret_for_sessions_replace_me")
+    MASTER_KEY = os.environ.get("MASTER_KEY")
+    SECRET_KEY = os.environ.get("SECRET_KEY")
+    
+    if not MASTER_KEY or MASTER_KEY == "SUPER_SECRET_MASTER_KEY_HERE":
+        raise ValueError("MASTER_KEY environment variable is not set or uses the insecure default.")
+        
+    if not SECRET_KEY or SECRET_KEY == "SUPER_SECRET_KEY_HERE":
+        raise ValueError("SECRET_KEY environment variable is not set or uses the insecure default.")
     
     ABUSE_EMAIL = os.environ.get("ABUSE_EMAIL", "abuse@yourdomain.com")
     ADMIN_HANDLE = os.environ.get("ADMIN_HANDLE", "your_handle")

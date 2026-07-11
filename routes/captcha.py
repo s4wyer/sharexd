@@ -4,11 +4,9 @@ import time
 import secrets
 import random
 import re
-from extensions import limiter
+from extensions import limiter, meta_db
 
 captcha_bp = Blueprint('captcha', __name__)
-
-active_captchas = {}
 
 @captcha_bp.route('/view/<path:path>/verify', methods=['GET', 'POST'])
 @limiter.limit("30 per minute")
@@ -16,17 +14,6 @@ def verify_captcha(path):
     safe_path = secure_filename(path)
 
     current_time = time.time()
-    expired_keys = []
-    for k, v in active_captchas.items():
-        if isinstance(v, dict):
-            if current_time - v['time'] > 300:
-                expired_keys.append(k)
-        else:
-            if current_time - v > 300:
-                expired_keys.append(k)
-                
-    for k in expired_keys:
-        active_captchas.pop(k, None)
 
     if request.method == 'GET':
         if 'euler' in request.args:
@@ -41,7 +28,7 @@ def verify_captcha(path):
             captcha_type = random.choice(['rhythm', 'sql', 'slider', 'regex'])
         
         challenge_id = secrets.token_hex(8)
-        active_captchas[challenge_id] = {'time': time.time(), 'type': captcha_type}
+        meta_db.set(f"captcha_{challenge_id}", {'time': time.time(), 'type': captcha_type})
         
         if captcha_type == 'rhythm':
             return render_template('verify_rhythm.html', filename=safe_path, challenge_id=challenge_id)
@@ -56,11 +43,13 @@ def verify_captcha(path):
 
     elif request.method == 'POST':
         challenge_id = request.form.get('challenge_id')
-        challenge_data = active_captchas.pop(challenge_id, None) if challenge_id else None
+        challenge_data = meta_db.get(f"captcha_{challenge_id}") if challenge_id else None
+        if challenge_id:
+            meta_db.delete(f"captcha_{challenge_id}")
         
-        if not challenge_data:
+        if not challenge_data or current_time - (challenge_data.get('time', 0) if isinstance(challenge_data, dict) else challenge_data) > 300:
             new_challenge = secrets.token_hex(8)
-            active_captchas[new_challenge] = {'time': time.time(), 'type': 'rhythm'}
+            meta_db.set(f"captcha_{new_challenge}", {'time': time.time(), 'type': 'rhythm'})
             return render_template('verify_rhythm.html', filename=safe_path, challenge_id=new_challenge, error="Session expired. Try again.")
             
         if not isinstance(challenge_data, dict):
@@ -84,7 +73,7 @@ def verify_captcha(path):
             
             if server_elapsed < target - 0.5:
                 new_challenge = secrets.token_hex(8)
-                active_captchas[new_challenge] = {'time': time.time(), 'type': 'rhythm'}
+                meta_db.set(f"captcha_{new_challenge}", {'time': time.time(), 'type': 'rhythm'})
                 return render_template('verify_rhythm.html', filename=safe_path, challenge_id=new_challenge,
                                        error="Rejected for time manipulation.")
             
@@ -93,7 +82,7 @@ def verify_captcha(path):
                 return redirect(url_for('files.view_file', path=safe_path))
             else:
                 new_challenge = secrets.token_hex(8)
-                active_captchas[new_challenge] = {'time': time.time(), 'type': 'rhythm'}
+                meta_db.set(f"captcha_{new_challenge}", {'time': time.time(), 'type': 'rhythm'})
                 return render_template('verify_rhythm.html', filename=safe_path, challenge_id=new_challenge,
                                        error=f"Rejected for being out of rhythm. You took {elapsed:.3f}s. We needed exactly 2.718s.")
                                        
@@ -111,9 +100,8 @@ def verify_captcha(path):
                 return redirect(url_for('files.view_file', path=safe_path))
             else:
                 new_challenge = secrets.token_hex(8)
-                active_captchas[new_challenge] = {'time': time.time(), 'type': 'sql'}
+                meta_db.set(f"captcha_{new_challenge}", {'time': time.time(), 'type': 'sql'})
                 
-                # Guide the user by showing the fake query
                 fake_query = f"SELECT * FROM access_tokens WHERE token = '{token}'"
                 error_msg = f"ERR: 0 rows returned for query: {fake_query}"
                 return render_template('verify_sql.html', filename=safe_path, challenge_id=new_challenge,
@@ -131,7 +119,7 @@ def verify_captcha(path):
                 return redirect(url_for('files.view_file', path=safe_path))
             else:
                 new_challenge = secrets.token_hex(8)
-                active_captchas[new_challenge] = {'time': time.time(), 'type': 'slider'}
+                meta_db.set(f"captcha_{new_challenge}", {'time': time.time(), 'type': 'slider'})
                 return render_template('verify_slider.html', filename=safe_path, challenge_id=new_challenge,
                                        error=f"Rejected. You dragged to {slider_value:.4f}%. We needed exactly 42.0000%.")
                                        
@@ -143,7 +131,7 @@ def verify_captcha(path):
                 return redirect(url_for('files.view_file', path=safe_path))
             else:
                 new_challenge = secrets.token_hex(8)
-                active_captchas[new_challenge] = {'time': time.time(), 'type': 'regex'}
+                meta_db.set(f"captcha_{new_challenge}", {'time': time.time(), 'type': 'regex'})
                 return render_template('verify_regex.html', filename=safe_path, challenge_id=new_challenge,
                                        regex_pattern=pattern,
                                        error="Rejected. The string did not match the required pattern.")

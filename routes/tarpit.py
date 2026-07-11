@@ -2,7 +2,6 @@ import os
 import random
 import string
 import json
-import time
 from flask import Blueprint, send_file, Response, request, redirect
 
 tarpit_bp = Blueprint('tarpit', __name__)
@@ -220,8 +219,6 @@ def setup_tarpit(bp):
         return Response("\n".join(lines), mimetype='text/plain')
 
     def handle_tarpit(*args, **kwargs):
-        time.sleep(random.uniform(1.5, 2.5))
-        
         path = request.path
         
         if any(path.startswith(p) for p in WP_FILES):
