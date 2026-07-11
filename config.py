@@ -16,6 +16,7 @@ class Config:
     
     USERS_FILE = os.environ.get("USERS_FILE", "users.json")
     MASTER_KEY = os.environ.get("MASTER_KEY", "SUPER_SECRET_MASTER_KEY_HERE")
+    SECRET_KEY = os.environ.get("SECRET_KEY", "fallback_secret_for_sessions_replace_me")
     
     ABUSE_EMAIL = os.environ.get("ABUSE_EMAIL", "abuse@yourdomain.com")
     ADMIN_HANDLE = os.environ.get("ADMIN_HANDLE", "your_handle")
@@ -26,4 +27,4 @@ class Config:
     
     TARPIT_ENABLED = str(os.environ.get("TARPIT_ENABLED", "true")).lower() in ("true", "1", "yes", "t")
     
-    VERSION = "v1.2.6"
+    VERSION = "v1.2.7"

@@ -23,11 +23,13 @@ def create_app():
     from routes.home import home_bp
     from routes.upload import upload_bp
     from routes.files import files_bp
+    from routes.captcha import captcha_bp
 
     app.register_blueprint(errors_bp)
     app.register_blueprint(home_bp)
     app.register_blueprint(upload_bp)
     app.register_blueprint(files_bp)
+    app.register_blueprint(captcha_bp)
     
     if app.config.get('TARPIT_ENABLED', True):
         from routes.tarpit import tarpit_bp

@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %} - verify{% endblock %}
+
+{% block content %}
+<div class="file-viewer">
+	<pre>
+<a href="{{ url_for('home.index') }}" class="logo-link">{% include '_logo_small.html' %}</a>
+==================================================
+:: FILE VERIFICATION ::
+==================================================
+File         : {{ filename }}
+Status       : unverified
+Challenge    : authorization
+</pre>
+
+	<form id="verifyForm" method="POST" style="margin: 1rem 0; padding: 1rem; font-family: 'Geist Mono', monospace; font-size: 14px; line-height: 1.5; background: var(--bg-elevated); border: 1px solid var(--border-color); color: var(--fg-muted);">
+		<div style="display: flex; align-items: center;">
+			<span style="color: var(--accent-green); white-space: nowrap;">> ENTER TOKEN: </span>
+			<input type="text" name="token" id="sqlInput" style="background: transparent; border: none; color: var(--fg-main); font-family: inherit; font-size: inherit; outline: none; width: 100%; margin-left: 0.5rem;" autocomplete="off" autofocus>
+		</div>
+		
+		<input type="hidden" name="challenge_id" value="{{ challenge_id }}">
+
+		<div class="player-controls" style="margin-top: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
+			<button type="submit" id="action-btn" class="player-btn">[ execute ]</button>
+			<div class="player-spacer"></div>
+			<span class="player-vol-label" id="error-msg" style="color: var(--accent-orange);">{{ error if error else '' }}</span>
+		</div>
+	</form>
+
+	<pre class="file-meta">
+======================================================
+:: INSTRUCTIONS ::
+======================================================
+focus.
+access is restricted.
+bypass the query.</pre>
+</div>
+
+<script>
+(() => {
+	const actionBtn = document.getElementById('action-btn');
+	const verifyForm = document.getElementById('verifyForm');
+	const sqlInput = document.getElementById('sqlInput');
+
+
+	document.addEventListener('click', (e) => {
+		if (e.target.tagName !== 'BUTTON') {
+			sqlInput.focus();
+		}
+	});
+
+	verifyForm.addEventListener('submit', () => {
+		actionBtn.innerText = '[ ...     ]';
+		actionBtn.disabled = true;
+	});
+})();
+</script>
+{% endblock %}

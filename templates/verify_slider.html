@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %} - verify{% endblock %}
+
+{% block content %}
+<div class="file-viewer">
+	<pre>
+<a href="{{ url_for('home.index') }}" class="logo-link">{% include '_logo_small.html' %}</a>
+==================================================
+:: FILE VERIFICATION ::
+==================================================
+File         : {{ filename }}
+Status       : unverified
+Challenge    : slider
+</pre>
+
+			<div id="progress-container" class="player-progress-container" style="margin: 2rem 0; cursor: ew-resize;" role="slider" aria-label="Captcha slider" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+				<div id="progress-bar" class="player-progress-bar"></div>
+			</div>
+			
+			<div class="player-controls">
+				<span id="slider-value-display" style="color: var(--accent-blue); min-width: 100px;">0.0000%</span>
+				<div class="player-spacer"></div>
+				<button type="button" id="action-btn" class="player-btn">[ submit ]</button>
+			</div>
+			<div style="margin-top: 1rem;">
+				<span class="player-vol-label" id="error-msg" style="color: var(--accent-orange);">{{ error if error else '' }}</span>
+			</div>
+		</div>
+	</div>
+
+	<pre class="file-meta">
+======================================================
+:: INSTRUCTIONS ::
+======================================================
+prove you are human.
+drag the slider to exactly 42.0000%.</pre>
+</div>
+
+<form id="verifyForm" method="POST" style="display: none;">
+	<input type="hidden" name="slider_value" id="sliderValue">
+	<input type="hidden" name="challenge_id" value="{{ challenge_id }}">
+</form>
+
+<script>
+(() => {
+	const actionBtn = document.getElementById('action-btn');
+	const verifyForm = document.getElementById('verifyForm');
+	const sliderValueInput = document.getElementById('sliderValue');
+	const progressContainer = document.getElementById('progress-container');
+	const progressBar = document.getElementById('progress-bar');
+	const valueDisplay = document.getElementById('slider-value-display');
+
+	let isScrubbing = false;
+	let currentVal = 0.0;
+
+	const updateProgressFromEvent = (e) => {
+		const rect = progressContainer.getBoundingClientRect();
+		const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+		currentVal = pos * 100;
+		progressBar.style.width = `${currentVal}%`;
+		valueDisplay.innerText = `${currentVal.toFixed(4)}%`;
+		progressContainer.setAttribute('aria-valuenow', Math.round(currentVal));
+	};
+
+	progressContainer.addEventListener('pointerdown', (e) => {
+		isScrubbing = true;
+		progressContainer.setPointerCapture(e.pointerId);
+		updateProgressFromEvent(e);
+	});
+	
+	progressContainer.addEventListener('pointermove', (e) => {
+		if (isScrubbing) {
+			updateProgressFromEvent(e);
+		}
+	});
+	
+	const endScrubbing = (e) => {
+		if (isScrubbing) {
+			isScrubbing = false;
+			try { progressContainer.releasePointerCapture(e.pointerId); } catch(err) {}
+		}
+	};
+
+	progressContainer.addEventListener('pointerup', endScrubbing);
+	progressContainer.addEventListener('pointercancel', endScrubbing);
+
+	actionBtn.addEventListener('click', () => {
+		sliderValueInput.value = currentVal.toFixed(4);
+		verifyForm.submit();
+	});
+})();
+</script>
+{% endblock %}

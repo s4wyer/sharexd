@@ -41,4 +41,4 @@ EXPOSE 5000
 
 VOLUME ["/app/uploads", "/app/meta.lmdb"]
 
-CMD ["gunicorn", "-w", "2", "--preload", "-b", "0.0.0.0:5000", "main:app"]
+CMD ["gunicorn", "-w", "4", "--preload", "-b", "0.0.0.0:5000", "main:app"]

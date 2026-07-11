@@ -20,6 +20,7 @@
 # Configuration
   - [ ] Customizable filename length
   - [ ] Gfycat style filenames
+  - [ ] UUID filenames
   - [x] File size limit
 
 # Maintainability
@@ -54,9 +55,9 @@
   - [ ] Send the X-Vampire header to only allow the uploaded file to be viewed between 9 P.M and 5 A.M
   - [ ] /verify for captchas
     - [ ] Different shades of off white. “Select every image containing a wall painted in eggshell white. do not select satin white.”
-    - [ ] "To prove you are human, drag the slider to exactly 42.0000%."
-    - [ ] Complicated regex, must submit a string that matches
-    - [ ] You must use SQL injection to bypass the captcha
-    - [ ] Click the button in exactly 2.718 seconds, and if you fail, reject the user for "being out of rhythm"
     - [ ] Find the syntax error (easy to implement with ast.parse)
+    - [x] Complicated regex, must submit a string that matches
+    - [x] "To prove you are human, drag the slider to exactly 42.0000%."
+    - [x] You must use SQL injection to bypass the captcha
+    - [x] Click the button in exactly 2.718 seconds, and if you fail, reject the user for "being out of rhythm"
   - [x] Replace metadata with other values (like setting the camera to a Nintendo DSi and the coordinates to the Marianna Trench)  

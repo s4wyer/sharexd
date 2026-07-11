@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block title %} - verify{% endblock %}
+
+{% block content %}
+<div class="file-viewer">
+	<pre>
+<a href="{{ url_for('home.index') }}" class="logo-link">{% include '_logo_small.html' %}</a>
+==================================================
+:: FILE VERIFICATION ::
+==================================================
+File         : {{ filename }}
+Status       : unverified
+Challenge    : rhythm
+</pre>
+
+			<pre id="ascii-canvas" style="width: 100%; margin: 1rem 0; padding: 1rem 0; font-family: 'Geist Mono', monospace; font-size: 14px; line-height: 1.2; text-align: center; white-space: pre; overflow-x: hidden; background: var(--bg-elevated); border: 1px solid var(--border-color); color: var(--fg-muted);"></pre>
+			
+			<div class="player-controls">
+				<button type="button" id="action-btn" class="player-btn">[ start ]</button>
+				<div class="player-spacer"></div>
+				<span class="player-vol-label" id="error-msg" style="color: var(--accent-orange);">{{ error if error else '' }}</span>
+			</div>
+		</div>
+	</div>
+
+	<pre class="file-meta">
+======================================================
+:: INSTRUCTIONS ::
+======================================================
+focus.
+euler's number is the goal (2.718s).
+stop the timer precisely.</pre>
+</div>
+
+<form id="verifyForm" method="POST" style="display: none;">
+	<input type="hidden" name="client_elapsed" id="clientElapsed">
+	<input type="hidden" name="challenge_id" value="{{ challenge_id }}">
+</form>
+
+<script>
+(() => {
+	const actionBtn = document.getElementById('action-btn');
+	const asciiCanvas = document.getElementById('ascii-canvas');
+	const verifyForm = document.getElementById('verifyForm');
+	const clientElapsedInput = document.getElementById('clientElapsed');
+	const errorMsg = document.getElementById('error-msg');
+
+	let startTime = null;
+	let frozen = false;
+	const targetTime = 2.718;
+
+	const cs = getComputedStyle(document.documentElement);
+	const greenColor = cs.getPropertyValue('--accent-green').trim() || '#A6E22E';
+	const blueColor = cs.getPropertyValue('--accent-blue').trim() || '#569CD6';
+	const orangeColor = cs.getPropertyValue('--accent-orange').trim() || '#D19A66';
+	const mutedColor = cs.getPropertyValue('--fg-muted').trim() || '#888';
+
+	const CW = 46; // inner char width
+	const CH = 17; // inner char height
+	const PW = CW * 2; // virtual pixel width  (92)
+	const PH = CH * 4; // virtual pixel height  (68)
+
+	const DOTS = [
+		[0x01, 0x08],
+		[0x02, 0x10],
+		[0x04, 0x20],
+		[0x40, 0x80],
+	];
+
+	const NUM_WAVES = 4;
+	const TARGET_FREQ = 3.0;
+	const BASE_FREQS  = [2.2, 2.7, 3.3, 3.8];
+	const BASE_PHASES = [-Math.PI * 0.75, -Math.PI * 0.25,
+	                      Math.PI * 0.25,  Math.PI * 0.75];
+
+	function drawWaveforms(timestamp) {
+		if (frozen) return;
+
+		const t = timestamp / 1000;
+
+		let convergence;
+		if (!startTime) {
+			convergence = 0.35 + 0.25 * Math.sin(t * 0.25);
+		} else {
+			const elapsed = (performance.now() - startTime) / 1000;
+			const peakConv  = Math.exp(-Math.pow(elapsed - targetTime, 2) * 6);
+			const startConv = Math.exp(-elapsed * elapsed * 3);
+			convergence = Math.max(peakConv, startConv);
+		}
+
+		const grid = [];
+		for (let r = 0; r < CH; r++) grid[r] = new Uint8Array(CW);
+
+		const scroll    = t * 1.5; // horizontal scroll speed
+		const amplitude = (PH / 2) - 5; // leave a small margin
+		const centerY   = PH / 2;
+
+		for (let w = 0; w < NUM_WAVES; w++) {
+			const freq  = TARGET_FREQ + (BASE_FREQS[w] - TARGET_FREQ) * (1 - convergence);
+			const phase = BASE_PHASES[w] * (1 - convergence);
+
+			for (let px = 0; px < PW; px++) {
+				const xNorm = (px / PW) * Math.PI * 2 * freq + scroll + phase;
+				const py = Math.round(centerY + amplitude * Math.sin(xNorm));
+
+				if (py >= 0 && py < PH) {
+					const cx = Math.floor(px / 2);
+					const cy = Math.floor(py / 4);
+					grid[cy][cx] |= DOTS[py % 4][px % 2];
+				}
+			}
+		}
+
+		const lines = [];
+		for (let r = 0; r < CH; r++) {
+			let row = '';
+			for (let c = 0; c < CW; c++) {
+				row += String.fromCharCode(0x2800 | grid[r][c]);
+			}
+			lines.push(row);
+		}
+
+		let color = mutedColor;
+		if (startTime) {
+			const elapsed = (performance.now() - startTime) / 1000;
+			if (elapsed > targetTime + 0.1) {
+				color = orangeColor;
+			} else if (Math.abs(elapsed - targetTime) <= 0.1) {
+				color = blueColor;
+			} else {
+				color = greenColor;
+			}
+		}
+
+		asciiCanvas.textContent = lines.join('\n');
+		asciiCanvas.style.color = color;
+
+		requestAnimationFrame(drawWaveforms);
+	}
+
+	requestAnimationFrame(drawWaveforms);
+
+	actionBtn.addEventListener('click', () => {
+		if (!startTime) {
+			errorMsg.innerText = '';
+			startTime = performance.now();
+			actionBtn.innerText = '[ stop  ]';
+		} else {
+			const elapsed = performance.now() - startTime;
+			startTime = null;
+			frozen = true;
+
+			clientElapsedInput.value = elapsed;
+			actionBtn.innerText = '[ ...   ]';
+			actionBtn.disabled = true;
+
+			setTimeout(() => {
+				verifyForm.submit();
+			}, 500);
+		}
+	});
+})();
+</script>
+{% endblock %}

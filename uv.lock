@@ -316,7 +316,7 @@ wheels = [
 
 [[package]]
 name = "sharexd"
-version = "1.2.4"
+version = "1.2.7"
 source = { virtual = "." }
 dependencies = [
     { name = "boto3" },
