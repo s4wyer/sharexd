@@ -349,6 +349,7 @@ a:hover {
   scrollbar-color: var(--border-color) var(--bg-surface);
 }
 
+
 @media (max-width: 600px) {
   body {
     padding: 1rem;
@@ -377,3 +378,120 @@ a:hover {
     font-size: 10px;
   }
 }
+
+/* file browser */
+.file-browser {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border: 1px solid var(--border-color);
+  padding: 1rem;
+  width: 56ch;
+  max-width: 100%;
+  box-sizing: border-box;
+  background-color: var(--bg-surface);
+  max-height: 60vh;
+}
+
+.fb-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.fb-path {
+  color: var(--accent-blue);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 1rem;
+}
+
+.fb-up-btn, .fb-toggle-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent-blue);
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.fb-up-btn:focus-visible, .fb-toggle-btn:focus-visible {
+  outline: 1px dashed var(--accent-blue);
+  outline-offset: 4px;
+}
+
+.fb-up-btn:hover:not(:disabled), .fb-toggle-btn:hover {
+  text-decoration: underline dashed;
+}
+
+.fb-up-btn:disabled {
+  color: var(--fg-muted);
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.fb-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) var(--bg-surface);
+}
+
+.fb-item {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 0.1rem 0;
+}
+
+.fb-icon {
+  margin-right: 0.5rem;
+  color: var(--fg-muted);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.fb-name {
+  flex-grow: 1;
+  display: flex;
+  min-width: 0;
+  color: var(--fg-base);
+  font-size: 13px;
+}
+
+.fb-name-start {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  flex-shrink: 1;
+}
+
+.fb-name-end {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fb-item.is-dir .fb-name {
+  color: var(--accent-blue);
+}
+
+.fb-item:hover .fb-name {
+  color: var(--accent-green);
+  text-decoration: underline dashed;
+}
+
+.fb-meta {
+  color: var(--fg-muted);
+  font-size: 13px;
+  margin-left: 1rem;
+  white-space: nowrap;
+  flex-shrink: 0;

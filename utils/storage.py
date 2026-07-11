@@ -10,6 +10,7 @@ import boto3
 from botocore.exceptions import ClientError
 from boto3.s3.transfer import TransferConfig
 from utils import get_storage_info
+import fsspec
 
 class StorageProvider:
     def save(self, file_object, filename):
@@ -31,6 +32,9 @@ class StorageProvider:
         raise NotImplementedError
 
     def delete(self, filename):
+        raise NotImplementedError
+
+    def get_file_object(self, filename):
         raise NotImplementedError
 
 class LocalStorageProvider(StorageProvider):
@@ -141,6 +145,13 @@ class LocalStorageProvider(StorageProvider):
             'storage_used': get_pretty_bytes(stats.get('storage_used_bytes', 0))
         }
 
+    def get_file_object(self, filename):
+        safe_path = secure_filename(filename)
+        full_path = os.path.join(self.upload_folder, safe_path)
+        if not os.path.isfile(full_path):
+            return None
+        return open(full_path, 'rb')
+
 class S3StorageProvider(StorageProvider):
     def __init__(self, bucket, endpoint, access_key, secret_key, region):
         self.bucket = bucket
@@ -150,6 +161,12 @@ class S3StorageProvider(StorageProvider):
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
             region_name=region
+        )
+        self.fs = fsspec.filesystem(
+            's3',
+            key=access_key,
+            secret=secret_key,
+            client_kwargs={'endpoint_url': endpoint, 'region_name': region}
         )
         self._stats_lock = threading.Lock()
 
@@ -327,3 +344,9 @@ class S3StorageProvider(StorageProvider):
             'total_files': 'Calculating...',
             'storage_used': 'Calculating...'
         }
+
+    def get_file_object(self, filename):
+        try:
+            return self.fs.open(f"{self.bucket}/{filename}", "rb")
+        except FileNotFoundError:
+            return None

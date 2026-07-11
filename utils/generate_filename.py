@@ -36,6 +36,12 @@ def generate_filename(buffer, check_exists_func=None):
                 return filename
 
 def get_extension(buffer):
+    # zip magic bytes
+    # for some reason magic looks at the middle of the file to decide if it's a zip
+    # if you're uploading some fucked up file without the magic zip bytes then you're getting a .bin
+    if buffer.startswith((b'PK\x03\x04', b'PK\x05\x06', b'PK\x07\x08')):
+        return '.zip'
+
     mime_type = magic.from_buffer(buffer, mime=True)
 
     if mime_type == '':

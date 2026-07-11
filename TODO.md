@@ -5,7 +5,7 @@
   - [ ] OBJ/STL files (three.js)
   - [ ] CSV (convert to an html table)
   - [ ] Show metadata for media files
-  - [-] Text
+  - [ ] Text
     - [ ] Syntax highlighting
   - [x] Unknown files
 

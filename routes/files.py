@@ -1,12 +1,13 @@
-from flask import Blueprint, request, jsonify, make_response, render_template, url_for, session, redirect 
+from flask import Blueprint, request, jsonify, make_response, render_template, url_for, session, redirect, Response
 from werkzeug.utils import secure_filename
 import secrets
-
 from extensions import limiter, storage, meta_db
 from datetime import datetime
 from PIL import Image
 import time
 import io
+from utils.archive import get_archive_contents, stream_archive_file
+
 
 files_bp = Blueprint('files', __name__)
 
@@ -66,7 +67,11 @@ def view_file(path):
 
     mime_type = metadata['mime_type']
     
-    if mime_type.startswith('image/'):
+    is_archive = safe_path.lower().endswith(('.zip', '.tar', '.tar.gz', '.tgz', '.tar.bz2', '.tbz2', '.tar.xz', '.txz'))
+
+    if is_archive:
+        template_name = 'archive.html'
+    elif mime_type.startswith('image/'):
         template_name = 'image.html'
     elif mime_type.startswith('audio/'):
         template_name = 'audio.html'
@@ -115,6 +120,33 @@ def view_file(path):
 
         kwargs['line_count'] = kwargs['text_content'].count('\n') + 1
 
+    elif template_name == 'archive.html':
+        raw_contents = None
+        if 'archive_contents' in meta_dict:
+            raw_contents = meta_dict['archive_contents']
+        elif 'archive_error' in meta_dict:
+            kwargs['archive_error'] = meta_dict['archive_error']
+        else:
+            file_obj = storage.get_file_object(safe_path)
+            if file_obj is None:
+                return jsonify({"error": "File not found."}), 404
+            
+            try:
+                archive_contents = get_archive_contents(file_obj)
+                meta_dict['archive_contents'] = archive_contents
+                meta_db.set(safe_path, meta_dict)
+                raw_contents = archive_contents
+            except Exception as e:
+                kwargs['archive_error'] = f"Failed to parse archive: {str(e)}"
+                meta_dict['archive_error'] = kwargs['archive_error']
+                meta_db.set(safe_path, meta_dict)
+            finally:
+                file_obj.close()
+                
+        if raw_contents is not None:
+            kwargs['archive_contents'] = raw_contents
+
+
     response = make_response(render_template(
         template_name,
         **kwargs
@@ -159,3 +191,21 @@ def deliver_file(path):
         response.headers['Content-Type'] = 'text/plain'
 
     return response
+
+@files_bp.route('/archive/<path:path>/<path:inner_path>')
+@limiter.limit("3000 per minute")
+def download_archive_file(path, inner_path):
+    safe_path = secure_filename(path)
+    file_obj = storage.get_file_object(safe_path)
+    if not file_obj:
+        return jsonify({"error": "Archive not found."}), 404
+        
+    filename = secure_filename(inner_path.split('/')[-1])
+    if not filename:
+        filename = "download"
+        
+    return Response(
+        stream_archive_file(file_obj, inner_path),
+        mimetype='application/octet-stream',
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
