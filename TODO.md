@@ -24,7 +24,7 @@
   - [x] File size limit
 
 # Maintainability
-  - [ ] Debug logs
+  - [x] Debug logs
   - [x] Split each route into different files
 
 # Design

@@ -1,12 +1,16 @@
+import logging
 from flask import Blueprint, render_template
 from config import Config
 from extensions import limiter, storage
+
+logger = logging.getLogger(__name__)
 
 home_bp = Blueprint('home', __name__)
 
 @home_bp.route('/')
 @limiter.limit("100 per minute")
 def index():
+    logger.debug("Serving index page")
     stats = storage.get_stats()
     
     return render_template(

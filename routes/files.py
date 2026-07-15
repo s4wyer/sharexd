@@ -1,3 +1,4 @@
+import logging
 from flask import Blueprint, request, jsonify, make_response, render_template, url_for, session, redirect, Response
 from werkzeug.utils import secure_filename
 import secrets
@@ -8,6 +9,7 @@ import time
 import io
 from utils.archive import get_archive_contents, stream_archive_file
 
+logger = logging.getLogger(__name__)
 
 files_bp = Blueprint('files', __name__)
 
@@ -48,6 +50,7 @@ def ensure_metadata(safe_path, mime_type=None, basic_metadata=None):
             pass
 
     if needs_update:
+        logger.debug(f"Updating missing metadata for file: {safe_path}")
         meta_db.set(safe_path, meta_dict)
         
     return meta_dict
@@ -57,12 +60,15 @@ def ensure_metadata(safe_path, mime_type=None, basic_metadata=None):
 @limiter.limit("3000 per minute")
 def view_file(path):
     safe_path = secure_filename(path)
+    logger.debug(f"Received view request for file: {safe_path}")
     
     if safe_path.startswith('BACKUP-'):
+        logger.debug(f"View denied: Attempted to view backup file {safe_path}")
         return jsonify({"error": "File not found."}), 404
 
     metadata = storage.get_metadata(safe_path)
     if not metadata:
+        logger.debug(f"View failed: Metadata not found for {safe_path}")
         return jsonify({"error": "File not found."}), 404
 
     mime_type = metadata['mime_type']
@@ -127,8 +133,10 @@ def view_file(path):
         elif 'archive_error' in meta_dict:
             kwargs['archive_error'] = meta_dict['archive_error']
         else:
+            logger.debug(f"Archive metadata missing for {safe_path}, generating on the fly")
             file_obj = storage.get_file_object(safe_path)
             if file_obj is None:
+                logger.debug(f"View archive failed: File object not found for {safe_path}")
                 return jsonify({"error": "File not found."}), 404
             
             try:
@@ -165,8 +173,10 @@ def view_file(path):
 @limiter.limit("3000 per minute")
 def deliver_file(path):
     safe_path = secure_filename(path)
+    logger.debug(f"Received delivery request for file: {safe_path}")
     
     if safe_path.startswith('BACKUP-'):
+        logger.debug(f"Delivery denied: Attempted to access backup file {safe_path}")
         return jsonify({"error": "File not found."}), 404
         
     # if the user appends ?download, it will be sent as an attachment that will be downloaded
@@ -196,8 +206,10 @@ def deliver_file(path):
 @limiter.limit("3000 per minute")
 def download_archive_file(path, inner_path):
     safe_path = secure_filename(path)
+    logger.debug(f"Received archive file download request: archive {safe_path}, inner_path {inner_path}")
     file_obj = storage.get_file_object(safe_path)
     if not file_obj:
+        logger.debug(f"Archive file download failed: Archive not found {safe_path}")
         return jsonify({"error": "Archive not found."}), 404
         
     filename = secure_filename(inner_path.split('/')[-1])

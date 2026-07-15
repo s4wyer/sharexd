@@ -6,8 +6,11 @@ import os
 import shutil
 import tempfile
 import uuid
+import logging
 from datetime import datetime
 from config import Config
+
+logger = logging.getLogger(__name__)
 
 class MetaDB:
     def __init__(self, path="meta.lmdb"):
@@ -50,10 +53,12 @@ class MetaDB:
         except lmdb.MapFullError:
             # double the map_size if it gets full
             new_size = self.env.info()['map_size'] * 2
+            logger.debug(f"MetaDB: LMDB map full, resizing to {new_size} bytes")
             self.env.set_mapsize(new_size)
             self._do_set(filename, metadata)
 
     def _do_set(self, filename: str, metadata: dict):
+        logger.debug(f"MetaDB: Setting metadata for {filename}")
         with self.env.begin(db=self.db, write=True) as txn:
             txn.put(
                 filename.encode('utf-8'),
@@ -62,6 +67,7 @@ class MetaDB:
 
     def delete(self, filename: str):
         self._init_db()
+        logger.debug(f"MetaDB: Deleting metadata for {filename}")
         with self.env.begin(db=self.db, write=True) as txn:
             txn.delete(filename.encode('utf-8'))
 
@@ -75,6 +81,7 @@ class MetaDB:
                 try:
                     self._perform_s3_backup(storage)
                 except Exception as e:
+                    logger.debug(f"S3 backup failed: {e}")
                     print(f"S3 backup failed: {e}")
                 time.sleep(86400) # sleep 24 hours
 
@@ -108,6 +115,7 @@ class MetaDB:
                 return
                 
             backup_dir = os.path.join(tempfile.gettempdir(), f"sharexd_meta_backup_{uuid.uuid4().hex}")
+            logger.debug(f"MetaDB: Starting S3 backup for today ({today}) to {s3_key}")
             os.makedirs(backup_dir, exist_ok=True)
             try:
                 self.env.copy(backup_dir, compact=True)
@@ -116,6 +124,7 @@ class MetaDB:
                 if os.path.exists(data_file):
                     with open(data_file, 'rb') as f:
                         storage.save(f, s3_key)
+                        logger.debug(f"MetaDB: Successfully uploaded S3 backup {s3_key}")
             finally:
                 if os.path.exists(backup_dir):
                     shutil.rmtree(backup_dir)
@@ -145,6 +154,8 @@ class MetaDB:
             
             if len(backups) > 7:
                 for obj in backups[:-7]:
+                    logger.debug(f"MetaDB: Pruning old S3 backup {obj['Key']}")
                     storage.delete(obj['Key'])
         except Exception as e:
+            logger.debug(f"Failed to prune old backups: {e}")
             print(f"Failed to prune old backups: {e}")

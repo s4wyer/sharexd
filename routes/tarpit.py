@@ -2,7 +2,10 @@ import os
 import random
 import string
 import json
+import logging
 from flask import Blueprint, send_file, Response, request, redirect
+
+logger = logging.getLogger(__name__)
 
 tarpit_bp = Blueprint('tarpit', __name__)
 
@@ -211,6 +214,7 @@ def generate_fake_sql_error():
 def setup_tarpit(bp):
     @bp.route('/robots.txt', methods=['GET', 'POST', 'HEAD', 'OPTIONS'])
     def robots_txt():
+        logger.debug("Serving tarpit robots.txt")
         lines = ["User-agent: *"]
         # bait scanners into hitting our tarpit routes by listing them all here
         # while also stopping legitimate scanners from getting baited
@@ -220,6 +224,7 @@ def setup_tarpit(bp):
 
     def handle_tarpit(*args, **kwargs):
         path = request.path
+        logger.debug(f"Tarpit triggered for path: {path}")
         
         if any(path.startswith(p) for p in WP_FILES):
             # endless redirect loop between WP files to break crawlers that follow redirects

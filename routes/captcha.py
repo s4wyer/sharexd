@@ -1,3 +1,4 @@
+import logging
 from flask import Blueprint, request, jsonify, render_template, session, redirect, url_for
 from werkzeug.utils import secure_filename
 import time
@@ -6,12 +7,15 @@ import random
 import re
 from extensions import limiter, meta_db
 
+logger = logging.getLogger(__name__)
+
 captcha_bp = Blueprint('captcha', __name__)
 
 @captcha_bp.route('/view/<path:path>/verify', methods=['GET', 'POST'])
 @limiter.limit("30 per minute")
 def verify_captcha(path):
     safe_path = secure_filename(path)
+    logger.debug(f"Received captcha verify request for file: {safe_path} (method: {request.method})")
 
     current_time = time.time()
 
@@ -28,6 +32,7 @@ def verify_captcha(path):
             captcha_type = random.choice(['rhythm', 'sql', 'slider', 'regex'])
         
         challenge_id = secrets.token_hex(8)
+        logger.debug(f"Generated new captcha challenge (type: {captcha_type}, id: {challenge_id})")
         meta_db.set(f"captcha_{challenge_id}", {'time': time.time(), 'type': captcha_type})
         
         if captcha_type == 'rhythm':
@@ -43,11 +48,13 @@ def verify_captcha(path):
 
     elif request.method == 'POST':
         challenge_id = request.form.get('challenge_id')
+        logger.debug(f"Received captcha verification post for challenge id: {challenge_id}")
         challenge_data = meta_db.get(f"captcha_{challenge_id}") if challenge_id else None
         if challenge_id:
             meta_db.delete(f"captcha_{challenge_id}")
         
         if not challenge_data or current_time - (challenge_data.get('time', 0) if isinstance(challenge_data, dict) else challenge_data) > 300:
+            logger.debug(f"Captcha failed: Challenge expired or not found (id: {challenge_id})")
             new_challenge = secrets.token_hex(8)
             meta_db.set(f"captcha_{new_challenge}", {'time': time.time(), 'type': 'rhythm'})
             return render_template('verify_rhythm.html', filename=safe_path, challenge_id=new_challenge, error="Session expired. Try again.")
@@ -72,15 +79,18 @@ def verify_captcha(path):
             tolerance = 0.1
             
             if server_elapsed < target - 0.5:
+                logger.debug("Captcha failed: Rejected for time manipulation")
                 new_challenge = secrets.token_hex(8)
                 meta_db.set(f"captcha_{new_challenge}", {'time': time.time(), 'type': 'rhythm'})
                 return render_template('verify_rhythm.html', filename=safe_path, challenge_id=new_challenge,
                                        error="Rejected for time manipulation.")
             
             if abs(elapsed - target) <= tolerance:
+                logger.debug(f"Captcha passed: Rhythm matched ({elapsed:.3f}s)")
                 session[f'verified_{safe_path}'] = True
                 return redirect(url_for('files.view_file', path=safe_path))
             else:
+                logger.debug(f"Captcha failed: Rhythm mismatch ({elapsed:.3f}s vs target {target}s)")
                 new_challenge = secrets.token_hex(8)
                 meta_db.set(f"captcha_{new_challenge}", {'time': time.time(), 'type': 'rhythm'})
                 return render_template('verify_rhythm.html', filename=safe_path, challenge_id=new_challenge,
@@ -96,9 +106,11 @@ def verify_captcha(path):
                     is_bypass = True
 
             if is_bypass:
+                logger.debug("Captcha passed: Valid SQL bypass detected")
                 session[f'verified_{safe_path}'] = True
                 return redirect(url_for('files.view_file', path=safe_path))
             else:
+                logger.debug("Captcha failed: Invalid SQL token")
                 new_challenge = secrets.token_hex(8)
                 meta_db.set(f"captcha_{new_challenge}", {'time': time.time(), 'type': 'sql'})
                 
@@ -115,9 +127,11 @@ def verify_captcha(path):
                 slider_value = 0.0
                 
             if abs(slider_value - 42.0) < 0.00001:
+                logger.debug(f"Captcha passed: Slider value correct ({slider_value:.4f})")
                 session[f'verified_{safe_path}'] = True
                 return redirect(url_for('files.view_file', path=safe_path))
             else:
+                logger.debug(f"Captcha failed: Slider value incorrect ({slider_value:.4f})")
                 new_challenge = secrets.token_hex(8)
                 meta_db.set(f"captcha_{new_challenge}", {'time': time.time(), 'type': 'slider'})
                 return render_template('verify_slider.html', filename=safe_path, challenge_id=new_challenge,
@@ -127,9 +141,11 @@ def verify_captcha(path):
             token = request.form.get('token', '')
             pattern = r'^sxd-(BEEP|BOOP)-[A-Z]{3,5}(?<!Q)-[13579]{2,4}-[^a-zA-Z0-9\s]{2}-(MOO|MEOW|QUACK)-\1-\2-[a-z0-9]{4}-TOTALLY_HUMAN$'
             if re.match(pattern, token):
+                logger.debug("Captcha passed: Regex matched successfully")
                 session[f'verified_{safe_path}'] = True
                 return redirect(url_for('files.view_file', path=safe_path))
             else:
+                logger.debug("Captcha failed: Regex mismatch")
                 new_challenge = secrets.token_hex(8)
                 meta_db.set(f"captcha_{new_challenge}", {'time': time.time(), 'type': 'regex'})
                 return render_template('verify_regex.html', filename=safe_path, challenge_id=new_challenge,

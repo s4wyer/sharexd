@@ -1,4 +1,5 @@
 import time
+import logging
 from flask import Blueprint, request, jsonify, render_template, url_for
 from werkzeug.utils import secure_filename
 import hmac
@@ -12,6 +13,8 @@ from utils.metadata import replace_image_metadata
 from utils import generate_filename
 import libarchive
 
+logger = logging.getLogger(__name__)
+
 MAX_ARCHIVE_FILES = 5000
 MAX_UNCOMPRESSED_SIZE = 1 * 1024 * 1024 * 1024 # 1 GB
 
@@ -20,20 +23,25 @@ upload_bp = Blueprint('upload', __name__)
 @upload_bp.route('/upload', methods=['POST'])
 @limiter.limit("300 per minute")
 def upload():
+    logger.debug("Received file upload request")
     auth_header = request.headers.get('Authorization')
 
     if not auth_header:
+        logger.debug("Upload failed: Missing Authorization header")
         return jsonify({"error": "Missing Authorization header."}), 401
 
     if not is_valid_token(auth_header):
+        logger.debug("Upload failed: Invalid Authorization token")
         return jsonify({"error": "Invalid Authorization token. Check your .env or users file."}), 401
     
     if 'file' not in request.files:
+        logger.debug("Upload failed: 'file' key not found in request.files")
         return jsonify({"error": "No file provided."}), 400           
 
     uploaded_file = request.files['file']
 
     if uploaded_file.filename == '':
+        logger.debug("Upload failed: No file selected")
         return jsonify({"error": "No file selected."}), 400
 
     file_header = uploaded_file.read(2048)
@@ -41,15 +49,20 @@ def upload():
     uploaded_file.seek(0)
 
     mime_type = magic.from_buffer(file_header, mime=True)
+    logger.debug(f"Detected mime type for '{uploaded_file.filename}': {mime_type}")
     try:
         uploaded_file = replace_image_metadata(uploaded_file, mime_type)
+        logger.debug("Successfully processed image metadata (if applicable)")
     except ValueError as e:
+        logger.debug(f"Upload failed: Metadata processing error - {e}")
         return jsonify({"error": str(e)}), 400
 
     new_filename = secure_filename(generate_filename.generate_filename(file_header, storage.exists))
+    logger.debug(f"Generated new filename: {new_filename}")
 
     username = get_username_from_token(auth_header)
     timestamp = int(time.time())
+    logger.debug(f"User '{username}' is uploading file '{uploaded_file.filename}'")
     meta_data = {
         "user": username,
         "original_filename": uploaded_file.filename,
@@ -67,6 +80,7 @@ def upload():
             uploaded_file.seek(0)
 
     if new_filename.lower().endswith(('.zip', '.tar', '.tar.gz', '.tgz', '.tar.bz2', '.tbz2', '.tar.xz', '.txz')):
+        logger.debug(f"File '{new_filename}' is an archive, attempting to parse contents")
         try:
             uploaded_file.seek(0)
             archive_contents = []
@@ -77,10 +91,12 @@ def upload():
                 for entry in archive:
                     file_count += 1
                     if file_count > MAX_ARCHIVE_FILES:
+                        logger.debug("Archive contains too many files, triggering zip bomb protection")
                         raise ValueError("Archive contains too many files (zip bomb protection).")
                     
                     total_size += entry.size
                     if total_size > MAX_UNCOMPRESSED_SIZE:
+                        logger.debug("Archive uncompressed size is too large, triggering zip bomb protection")
                         raise ValueError("Archive uncompressed size is too large (zip bomb protection).")
                         
                     archive_contents.append({
@@ -89,17 +105,22 @@ def upload():
                         'is_dir': entry.isdir
                     })
             meta_data["archive_contents"] = archive_contents
+            logger.debug(f"Successfully parsed archive contents: {file_count} files, {total_size} bytes total")
             uploaded_file.seek(0)
         except ValueError as e:
+            logger.debug(f"Archive validation error: {e}")
             meta_data["archive_error"] = str(e)
             uploaded_file.seek(0)
         except Exception as e:
             meta_data["archive_error"] = "Failed to parse archive."
+            logger.debug(f"Error caching archive contents: {e}")
             print(f"Error caching archive contents: {e}")
             uploaded_file.seek(0)
 
+    logger.debug(f"Saving file '{new_filename}' to storage")
     storage.save(uploaded_file, new_filename)
 
+    logger.debug(f"Saving metadata for '{new_filename}'")
     meta_db.set(new_filename, meta_data)
 
     filename = new_filename
@@ -109,31 +130,39 @@ def upload():
     delete_token = generate_delete_token(filename, timestamp)
     delete_url = url_for('upload.delete_file', filename=filename, timestamp=timestamp, token=delete_token)
 
+    logger.debug(f"Upload successful. Returning URL: {url}")
     return jsonify({"url": url, "delete_url": delete_url})
 
 @upload_bp.route('/delete/<path:filename>/<int:timestamp>/<token>', methods=['DELETE', 'GET', 'POST'])
 @limiter.limit("60 per minute")
 def delete_file(filename, timestamp, token):
+    logger.debug(f"Received delete request for file: '{filename}', method: {request.method}")
     safe_path = secure_filename(filename)
     expected = generate_delete_token(safe_path, timestamp)
 
     is_master_key = Config.MASTER_KEY and Config.MASTER_KEY != "SUPER_SECRET_MASTER_KEY_HERE" and hmac.compare_digest(Config.MASTER_KEY, token)
 
     if not (hmac.compare_digest(expected, token) or is_master_key):
+        logger.debug(f"Delete failed: Invalid delete token for file '{filename}'")
         return jsonify({"error": "Invalid delete token."}), 403
 
     if request.method == 'GET':
+        logger.debug(f"Serving delete confirmation page for file: '{safe_path}'")
         return render_template('delete.html', filename=safe_path, deleted=False)
 
     if not storage.exists(safe_path):
+        logger.debug(f"Delete failed: File not found '{safe_path}'")
         if request.method == 'POST':
             return render_template('delete.html', filename=safe_path, deleted=False, error="File not found."), 404
         return jsonify({"error": "File not found."}), 404
 
+    logger.debug(f"Deleting file '{safe_path}' and its metadata")
     storage.delete(safe_path)
     meta_db.delete(safe_path)
     
     if request.method == 'POST':
+        logger.debug(f"Delete successful (POST), rendering template for file '{safe_path}'")
         return render_template('delete.html', filename=safe_path, deleted=True)
         
+    logger.debug(f"Delete successful (DELETE API), returning JSON for file '{safe_path}'")
     return jsonify({"message": "File deleted."}), 200

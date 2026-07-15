@@ -2,6 +2,7 @@ import os
 import mimetypes
 import time
 import threading
+import logging
 from datetime import datetime
 from flask import send_from_directory, make_response, Response
 from werkzeug.utils import secure_filename
@@ -10,6 +11,8 @@ from botocore.exceptions import ClientError
 from boto3.s3.transfer import TransferConfig
 from utils import get_storage_info
 import fsspec
+
+logger = logging.getLogger(__name__)
 
 class StorageProvider:
     def save(self, file_object, filename):
@@ -43,6 +46,7 @@ class LocalStorageProvider(StorageProvider):
 
     def save(self, file_object, filename):
         safe_path = os.path.join(self.upload_folder, filename)
+        logger.debug(f"Local storage: Saving file to {safe_path}")
         if hasattr(file_object, 'save'):
             file_object.save(safe_path)
         else:
@@ -82,6 +86,7 @@ class LocalStorageProvider(StorageProvider):
 
     def stream(self, filename, force_download=False, download_name=None):
         safe_path = secure_filename(filename)
+        logger.debug(f"Local storage: Streaming file {safe_path} (force_download={force_download})")
         kwargs = {
             'as_attachment': force_download,
             'conditional': True
@@ -106,6 +111,7 @@ class LocalStorageProvider(StorageProvider):
         safe_path = secure_filename(filename)
         full_path = os.path.join(self.upload_folder, safe_path)
         if os.path.isfile(full_path):
+            logger.debug(f"Local storage: Deleting file {full_path}")
             file_size = os.path.getsize(full_path)
             os.remove(full_path)
             
@@ -170,6 +176,7 @@ class S3StorageProvider(StorageProvider):
         self._stats_lock = threading.Lock()
 
     def save(self, file_object, filename):
+        logger.debug(f"S3 storage: Saving file {filename} to bucket {self.bucket}")
         mime_type, _ = mimetypes.guess_type(filename)
         extra_args = {}
         if mime_type:
@@ -228,6 +235,7 @@ class S3StorageProvider(StorageProvider):
 
     def stream(self, filename, force_download=False, download_name=None):
         from flask import request
+        logger.debug(f"S3 storage: Streaming file {filename} from bucket {self.bucket}")
         
         extra_args = {}
         range_header = request.headers.get('Range')
@@ -277,6 +285,7 @@ class S3StorageProvider(StorageProvider):
             raise
 
     def delete(self, filename):
+        logger.debug(f"S3 storage: Deleting file {filename} from bucket {self.bucket}")
         try:
             from extensions import meta_db
             stats = meta_db.get('_internal:s3_stats')
