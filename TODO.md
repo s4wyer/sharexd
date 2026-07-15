@@ -1,5 +1,4 @@
 # Viewers
-  - [ ] Archives
   - [ ] Markdown (no html)
   - [ ] PDFs (pdf.js)
   - [ ] OBJ/STL files (three.js)
@@ -7,6 +6,7 @@
   - [ ] Show metadata for media files
   - [ ] Text
     - [ ] Syntax highlighting
+  - [x] Archives
   - [x] Unknown files
 
 # Security

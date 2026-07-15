@@ -1,6 +1,5 @@
 import os
 import mimetypes
-import json
 import time
 import threading
 from datetime import datetime

@@ -79,10 +79,15 @@
 	const baseHue = rgbToHue(greenRgb.r, greenRgb.g, greenRgb.b);
 
 	const VISUAL_CONFIG = {
-		numBars: 64,
-		blockHeight: 4,
-		blockGap: 2,
-		barWidth: 6,
+		numBars: 75,
+		eqBlockHeight: 12,
+		eqBlockGap: 8,
+		eqBarWidth: 20,
+		eqMarginX: 0,
+		dpr: 1,
+		tunnelBlockHeight: 4,
+		tunnelBlockGap: 2,
+		tunnelBarWidth: 6,
 		numRings: 18,
 		pointsPerRing: 12,
 		baseRadius: 6.0,
@@ -96,8 +101,8 @@
 		trackStrength: 0.3,
 		projScale: 0.9,
 		distOffset: 1.5,
-		baseSpeed: 0.015,
-		flightBaseSpeed: 0.15,
+		baseSpeed: 0.00975,
+		flightBaseSpeed: 0.0975,
 		bassFlightMult: 0.05,
 		bassHueMult: 1.5,
 		bassAlphaBase: 0.4,
@@ -128,17 +133,30 @@
 	function resizeCanvas() {
 		const rect = canvas.getBoundingClientRect();
 		const dpr = window.devicePixelRatio || 1;
-		canvas.width = rect.width * dpr;
+		VISUAL_CONFIG.dpr = dpr;
 		
-		const rawHeight = rect.height * dpr;
-		const gridSize = VISUAL_CONFIG.blockHeight + VISUAL_CONFIG.blockGap;
+		canvas.width = Math.floor(rect.width * dpr);
+		
+		VISUAL_CONFIG.eqBarWidth = Math.floor(canvas.width / VISUAL_CONFIG.numBars);
+		VISUAL_CONFIG.eqBlockHeight = Math.max(1, Math.floor(VISUAL_CONFIG.eqBarWidth * 0.6));
+		VISUAL_CONFIG.eqBlockGap = Math.max(1, Math.floor(VISUAL_CONFIG.eqBarWidth * 0.4));
+		
+		VISUAL_CONFIG.eqMarginX = Math.floor((canvas.width - (VISUAL_CONFIG.numBars * VISUAL_CONFIG.eqBarWidth)) / 2);
+		
+		const targetTunnelBlocks = 280;
+		VISUAL_CONFIG.tunnelBarWidth = Math.max(1, Math.floor(canvas.width / targetTunnelBlocks));
+		VISUAL_CONFIG.tunnelBlockHeight = Math.max(1, Math.floor(VISUAL_CONFIG.tunnelBarWidth * 0.66));
+		VISUAL_CONFIG.tunnelBlockGap = Math.max(1, Math.floor(VISUAL_CONFIG.tunnelBarWidth * 0.33));
+		
+		const rawHeight = Math.floor(rect.height * dpr);
+		const gridSize = VISUAL_CONFIG.eqBlockHeight + VISUAL_CONFIG.eqBlockGap;
 		canvas.height = Math.ceil(rawHeight / gridSize) * gridSize;
 		
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 	}
 	window.addEventListener('resize', resizeCanvas);
 	resizeCanvas();
-	drawAnalyzer();
+	requestAnimationFrame(drawAnalyzer);
 
 	function initAnalyzer() {
 		if (analyzerInitialized) return;
@@ -165,7 +183,7 @@
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
 	}
 
-	function updatePhysics() {
+	function updatePhysics(dt) {
 		let bassPulse = 0;
 		if (analyzerInitialized && !audio.paused) {
 			analyser.getByteFrequencyData(dataArray);
@@ -177,12 +195,12 @@
 			bassPulse = Math.max(0, bassAvg - 0.8) / 0.2; 
 		}
 		
-		currentBass += (Math.pow(bassPulse, 2) - currentBass) * 0.2;
+		currentBass += (Math.pow(bassPulse, 2) - currentBass) * 0.2 * dt;
 		
 		let physicsSpeed = audio.paused ? 0.5 : 1.0;
 		
-		time += VISUAL_CONFIG.baseSpeed * physicsSpeed; 
-		flightDistance += (VISUAL_CONFIG.flightBaseSpeed + (currentBass * VISUAL_CONFIG.bassFlightMult)) * physicsSpeed; 
+		time += VISUAL_CONFIG.baseSpeed * physicsSpeed * dt; 
+		flightDistance += (VISUAL_CONFIG.flightBaseSpeed + (currentBass * VISUAL_CONFIG.bassFlightMult)) * physicsSpeed * dt; 
 	}
 
 	function getCamera() {
@@ -195,11 +213,12 @@
 	}
 
 	function drawBlockLine(x0, y0, x1, y1, tunnelHue, alpha) {
-		const maxRows = Math.floor(canvas.height / (VISUAL_CONFIG.blockHeight + VISUAL_CONFIG.blockGap));
-		let c0 = Math.floor(x0 / VISUAL_CONFIG.barWidth);
-		let r0 = Math.floor(y0 / (VISUAL_CONFIG.blockHeight + VISUAL_CONFIG.blockGap));
-		let c1 = Math.floor(x1 / VISUAL_CONFIG.barWidth);
-		let r1 = Math.floor(y1 / (VISUAL_CONFIG.blockHeight + VISUAL_CONFIG.blockGap));
+		const maxRows = Math.floor(canvas.height / (VISUAL_CONFIG.tunnelBlockHeight + VISUAL_CONFIG.tunnelBlockGap));
+		const maxCols = Math.floor(canvas.width / VISUAL_CONFIG.tunnelBarWidth);
+		let c0 = Math.floor(x0 / VISUAL_CONFIG.tunnelBarWidth);
+		let r0 = Math.floor(y0 / (VISUAL_CONFIG.tunnelBlockHeight + VISUAL_CONFIG.tunnelBlockGap));
+		let c1 = Math.floor(x1 / VISUAL_CONFIG.tunnelBarWidth);
+		let r1 = Math.floor(y1 / (VISUAL_CONFIG.tunnelBlockHeight + VISUAL_CONFIG.tunnelBlockGap));
 		
 		let dx = Math.abs(c1 - c0), dy = Math.abs(r1 - r0);
 		let sx = (c0 < c1) ? 1 : -1, sy = (r0 < r1) ? 1 : -1;
@@ -209,10 +228,10 @@
 		
 		let steps = 0;
 		while (steps++ < 200) {
-			if (c0 >= 0 && c0 < VISUAL_CONFIG.numBars && r0 >= 0 && r0 < maxRows) {
-				const drawX = c0 * VISUAL_CONFIG.barWidth + 1;
-				const drawY = r0 * (VISUAL_CONFIG.blockHeight + VISUAL_CONFIG.blockGap) + VISUAL_CONFIG.blockGap;
-				ctx.fillRect(drawX, drawY, VISUAL_CONFIG.barWidth - 2, VISUAL_CONFIG.blockHeight);
+			if (c0 >= 0 && c0 < maxCols && r0 >= 0 && r0 < maxRows) {
+				const drawX = c0 * VISUAL_CONFIG.tunnelBarWidth + 1;
+				const drawY = r0 * (VISUAL_CONFIG.tunnelBlockHeight + VISUAL_CONFIG.tunnelBlockGap) + VISUAL_CONFIG.tunnelBlockGap;
+				ctx.fillRect(drawX, drawY, VISUAL_CONFIG.tunnelBarWidth - 2, VISUAL_CONFIG.tunnelBlockHeight);
 			}
 			if (c0 === c1 && r0 === r1) break;
 			let e2 = 2 * err;
@@ -308,17 +327,18 @@
 			
 			if (screenX >= 0 && screenX <= canvas.width && screenY >= 0 && screenY <= canvas.height) {
 				ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-				ctx.fillRect(screenX, screenY, 2, 2);
+				const starSize = Math.max(2, Math.floor(2 * (VISUAL_CONFIG.dpr || 1)));
+				ctx.fillRect(screenX, screenY, starSize, starSize);
 			}
 		}
 	}
 
-	function drawEqualizer() {
+	function drawEqualizer(dt) {
 		if (analyzerInitialized) {
 			const usefulBins = Math.floor(dataArray.length * 0.6);
 			const step = usefulBins / VISUAL_CONFIG.numBars;
 			
-			const maxEqHeight = Math.min(canvas.height, 250); 
+			const maxEqHeight = canvas.height * 0.85; 
 			
 			const gradient = ctx.createLinearGradient(0, canvas.height - maxEqHeight, 0, canvas.height);
 			gradient.addColorStop(0, 'rgba(255, 34, 34, 0.6)');
@@ -340,28 +360,40 @@
 				const targetHeight = percent * maxEqHeight;
 				
 				if (targetHeight > barPeaks[i]) {
-					barPeaks[i] += (targetHeight - barPeaks[i]) * 0.25; 
+					barPeaks[i] += (targetHeight - barPeaks[i]) * 0.25 * dt; 
 				} else {
-					barPeaks[i] *= 0.94; 
+					barPeaks[i] *= Math.pow(0.94, dt); 
 				}
 				
 				const barHeight = Math.max(0, barPeaks[i]);
-				const numBlocks = Math.floor(barHeight / (VISUAL_CONFIG.blockHeight + VISUAL_CONFIG.blockGap));
+				const numBlocks = Math.floor(barHeight / (VISUAL_CONFIG.eqBlockHeight + VISUAL_CONFIG.eqBlockGap));
+				
+				let pad = Math.floor(VISUAL_CONFIG.eqBarWidth * 0.2);
+				if (pad === 0 && VISUAL_CONFIG.eqBarWidth > 1) pad = 1;
+				const drawW = Math.max(1, VISUAL_CONFIG.eqBarWidth - (pad * 2));
 				
 				for (let j = 0; j < numBlocks; j++) {
-					const y = canvas.height - j * (VISUAL_CONFIG.blockHeight + VISUAL_CONFIG.blockGap) - VISUAL_CONFIG.blockHeight;
-					ctx.fillRect(i * VISUAL_CONFIG.barWidth + 1, y, VISUAL_CONFIG.barWidth - 2, VISUAL_CONFIG.blockHeight);
+					const y = canvas.height - j * (VISUAL_CONFIG.eqBlockHeight + VISUAL_CONFIG.eqBlockGap) - VISUAL_CONFIG.eqBlockHeight;
+					const drawX = VISUAL_CONFIG.eqMarginX + (i * VISUAL_CONFIG.eqBarWidth) + pad;
+					ctx.fillRect(drawX, y, drawW, VISUAL_CONFIG.eqBlockHeight);
 				}
 			}
 			ctx.globalCompositeOperation = 'source-over';
 		}
 	}
 
-	function drawAnalyzer() {
+	let lastTime = 0;
+	function drawAnalyzer(timestamp) {
 		requestAnimationFrame(drawAnalyzer);
+		if (!timestamp) return;
+		if (!lastTime) lastTime = timestamp;
+		let dt = (timestamp - lastTime) / (1000 / 200); // normalize to 200 FPS
+		lastTime = timestamp;
+		if (dt > 3) dt = 3;
+		if (isNaN(dt) || dt <= 0) dt = 1;
 		
 		applyMotionBlur();
-		updatePhysics();
+		updatePhysics(dt);
 		
 		let tunnelHue = VISUAL_CONFIG.tunnelHue - (currentBass * VISUAL_CONFIG.tunnelHue * VISUAL_CONFIG.bassHueMult);
 		tunnelHue = Math.max(0, Math.min(VISUAL_CONFIG.tunnelHue, tunnelHue));
@@ -372,7 +404,7 @@
 		
 		drawTunnel(cam, tunnelHue, tunnelAlphaMult);
 		drawStarfield(cam);
-		drawEqualizer();
+		drawEqualizer(dt);
 	}
 
 	playBtn.addEventListener('click', () => {

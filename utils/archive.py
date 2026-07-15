@@ -40,14 +40,14 @@ def stream_archive_file(file_obj, inner_path):
             for entry in archive:
                 file_count += 1
                 if file_count > MAX_ARCHIVE_FILES:
-                    break  # Prevent iterating over too many files (DoS protection)
+                    break  #
                     
                 if entry.pathname == inner_path:
                     if entry.isdir:
                         break
                     
                     if entry.size > MAX_UNCOMPRESSED_SIZE:
-                        break  # Prevent extracting massive files (DoS protection)
+                        break
                         
                     for block in entry.get_blocks():
                         yield block

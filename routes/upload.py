@@ -1,5 +1,4 @@
 import time
-import random
 from flask import Blueprint, request, jsonify, render_template, url_for
 from werkzeug.utils import secure_filename
 import hmac
@@ -11,8 +10,6 @@ from PIL import Image
 from utils.security import generate_delete_token, is_valid_token, get_username_from_token
 from utils.metadata import replace_image_metadata
 from utils import generate_filename
-import json
-import io
 import libarchive
 
 MAX_ARCHIVE_FILES = 5000

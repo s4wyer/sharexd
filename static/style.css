@@ -246,10 +246,6 @@ a:hover {
   border-radius: 0;
 }
 
-
-
-
-
 .file-meta {
   color: var(--fg-muted);
   margin-top: 0.75rem;
@@ -349,7 +345,6 @@ a:hover {
   scrollbar-color: var(--border-color) var(--bg-surface);
 }
 
-
 @media (max-width: 600px) {
   body {
     padding: 1rem;
@@ -409,7 +404,8 @@ a:hover {
   margin-right: 1rem;
 }
 
-.fb-up-btn, .fb-toggle-btn {
+.fb-up-btn,
+.fb-toggle-btn {
   background: none;
   border: none;
   padding: 0;
@@ -421,12 +417,14 @@ a:hover {
   white-space: nowrap;
 }
 
-.fb-up-btn:focus-visible, .fb-toggle-btn:focus-visible {
+.fb-up-btn:focus-visible,
+.fb-toggle-btn:focus-visible {
   outline: 1px dashed var(--accent-blue);
   outline-offset: 4px;
 }
 
-.fb-up-btn:hover:not(:disabled), .fb-toggle-btn:hover {
+.fb-up-btn:hover:not(:disabled),
+.fb-toggle-btn:hover {
   text-decoration: underline dashed;
 }
 
@@ -495,3 +493,4 @@ a:hover {
   margin-left: 1rem;
   white-space: nowrap;
   flex-shrink: 0;
+}
